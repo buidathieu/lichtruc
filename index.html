@@ -151,71 +151,90 @@
                         <textarea id="script-code" readonly class="w-full h-48 p-3 bg-gray-900 text-green-400 font-mono text-xs rounded-lg outline-none" style="resize: none;">
 function doPost(e) {
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    var data = JSON.parse(e.postData.contents);
-    
-    // Xóa vùng dữ liệu cũ để tránh đè lộn xộn
-    sheet.getRange("A1:K100").clearContent();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var request = JSON.parse(e.postData.contents);
+    var action = request.action;
 
-    // 1. Ghi Tiêu đề & Thông tin Tuần
-    sheet.getRange("A1").setValue("Lịch Trực Tuần").setFontWeight("bold").setFontSize(12);
-    sheet.getRange("B1").setValue(data.weekStart || "");
-    sheet.getRange("C1").setValue("đến");
-    sheet.getRange("D1").setValue(data.weekEnd || "");
-    sheet.getRange("A2").setValue("Cập nhật cuối: " + new Date().toLocaleString());
-    
-    // 2. Ghi tiêu đề bảng (dòng 4)
-    if(data.days) {
-      var headerRow = ["Vị trí"].concat(data.days);
-      sheet.getRange(4, 1, 1, headerRow.length).setValues([headerRow]).setFontWeight("bold").setBackground("#f3f4f6");
-    }
+    if (action === "save") {
+      var data = request.data;
+      var weekStart = data.weekStart; // VD: 2026-08-10
+      if (!weekStart) throw new Error("Thiếu ngày bắt đầu tuần.");
 
-    // 3. Ghi dữ liệu bảng lưới (từ dòng 5)
-    if (data.grid && data.grid.length > 0) {
-      sheet.getRange(5, 1, data.grid.length, data.grid[0].length).setValues(data.grid);
+      // Tạo tên Sheet theo tuần (VD: Tuần 10-08-2026)
+      var parts = weekStart.split('-');
+      var sheetName = "Tuần " + parts[2] + "-" + parts[1] + "-" + parts[0];
+
+      // Tìm Sheet, nếu chưa có thì tự động tạo Tab mới
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        sheet = ss.insertSheet(sheetName);
+      }
+
+      // Xóa vùng dữ liệu cũ của tuần này để cập nhật
+      sheet.getRange("A1:K100").clearContent();
+
+      // 1. Ghi Tiêu đề & Thông tin Tuần
+      sheet.getRange("A1").setValue("Lịch Trực Tuần").setFontWeight("bold").setFontSize(12);
+      sheet.getRange("B1").setValue("'" + data.weekStart);
+      sheet.getRange("C1").setValue("đến");
+      sheet.getRange("D1").setValue("'" + data.weekEnd);
+      sheet.getRange("A2").setValue("Cập nhật cuối: " + new Date().toLocaleString());
+      
+      // 2. Ghi tiêu đề bảng (dòng 4)
+      if(data.days) {
+        var headerRow = ["Vị trí"].concat(data.days);
+        sheet.getRange(4, 1, 1, headerRow.length).setValues([headerRow]).setFontWeight("bold").setBackground("#f3f4f6");
+      }
+
+      // 3. Ghi dữ liệu bảng lưới (từ dòng 5)
+      if (data.grid && data.grid.length > 0) {
+        sheet.getRange(5, 1, data.grid.length, data.grid[0].length).setValues(data.grid);
+      }
+      
+      // 4. Ghi lịch sử đổi ca (Cột J, từ dòng 4)
+      sheet.getRange("J4").setValue("Lịch sử thay đổi").setFontWeight("bold").setBackground("#fef3c7");
+      if (data.logs && data.logs.length > 0) {
+        var logRows = data.logs.map(function(l) { return [l]; });
+        sheet.getRange(5, 10, logRows.length, 1).setValues(logRows);
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({"status": "success", "sheet": sheetName}))
+        .setMimeType(ContentService.MimeType.JSON);
+        
+    } else if (action === "load") {
+      var weekStart = request.weekStart;
+      var parts = weekStart.split('-');
+      var sheetName = "Tuần " + parts[2] + "-" + parts[1] + "-" + parts[0];
+      
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        return ContentService.createTextOutput(JSON.stringify({"status": "empty"}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      // Đọc thông tin
+      var wStart = sheet.getRange("B1").getValue();
+      var wEnd = sheet.getRange("D1").getValue();
+      var gridData = sheet.getRange(5, 1, 5, 8).getValues();
+      
+      // Đọc lịch sử
+      var logData = [];
+      var lastRow = sheet.getLastRow();
+      if(lastRow >= 5) {
+          var rawLogs = sheet.getRange(5, 10, lastRow - 4, 1).getValues();
+          logData = rawLogs.map(function(r){ return r[0]; }).filter(function(l){ return l !== ""; });
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        "status": "success", 
+        "grid": gridData,
+        "weekStart": wStart,
+        "weekEnd": wEnd,
+        "logs": logData
+      })).setMimeType(ContentService.MimeType.JSON);
     }
-    
-    // 4. Ghi lịch sử đổi ca (Cột J, từ dòng 4)
-    sheet.getRange("J4").setValue("Lịch sử thay đổi").setFontWeight("bold").setBackground("#fef3c7");
-    if (data.logs && data.logs.length > 0) {
-      var logRows = data.logs.map(function(l) { return [l]; });
-      sheet.getRange(5, 10, logRows.length, 1).setValues(logRows);
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({"status": "success"}))
-      .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": error.message}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-function doGet(e) {
-  try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    
-    // Đọc thông tin
-    var weekStart = sheet.getRange("B1").getValue();
-    var weekEnd = sheet.getRange("D1").getValue();
-    var gridData = sheet.getRange(5, 1, 5, 8).getValues();
-    
-    // Đọc lịch sử
-    var logData = [];
-    var lastRow = sheet.getLastRow();
-    if(lastRow >= 5) {
-        var rawLogs = sheet.getRange(5, 10, lastRow - 4, 1).getValues();
-        logData = rawLogs.map(function(r){ return r[0]; }).filter(function(l){ return l !== ""; });
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({
-      "status": "success", 
-      "grid": gridData,
-      "weekStart": weekStart instanceof Date ? weekStart.toISOString() : weekStart,
-      "weekEnd": weekEnd instanceof Date ? weekEnd.toISOString() : weekEnd,
-      "logs": logData
-    })).setMimeType(ContentService.MimeType.JSON);
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({"status": "error"}))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -238,14 +257,17 @@ function doGet(e) {
         const ROLES = ['Trực Lãnh Đạo', 'Trực Cấp Cứu', 'Trực Ngoại', 'Trực Nội', 'ĐD Hành Chính'];
         const STAFF = ['BS. Hùng', 'BS. An', 'BS. Tuấn', 'BS. Lan', 'ĐD. Thủy', 'BS. Dũng', 'BS. Bình', 'BS. Cường', 'ĐD. Thu'];
 
-        // Dữ liệu khởi tạo (Nếu chưa có dữ liệu từ Sheets)
-        let scheduleGrid = [
+        // Dữ liệu template gốc để reset khi sang tuần mới chưa có dữ liệu
+        const DEFAULT_GRID = [
             ['Trực Lãnh Đạo', 'BS. Hùng', 'BS. Dũng', 'BS. Hùng', 'BS. Dũng', 'BS. Hùng', 'BS. Dũng', 'BS. Hùng'],
             ['Trực Cấp Cứu', 'BS. An', 'BS. Bình', 'BS. An', 'BS. Bình', 'BS. An', 'BS. Bình', 'BS. An'],
             ['Trực Ngoại', 'BS. Tuấn', 'BS. Cường', 'BS. Tuấn', 'BS. Cường', 'BS. Tuấn', 'BS. Cường', 'BS. Tuấn'],
             ['Trực Nội', 'BS. Lan', 'BS. Lan', 'BS. Lan', 'BS. Lan', 'BS. Lan', 'BS. Lan', 'BS. Lan'],
             ['ĐD Hành Chính', 'ĐD. Thủy', 'ĐD. Thu', 'ĐD. Thủy', 'ĐD. Thu', 'ĐD. Thủy', 'ĐD. Thu', 'ĐD. Thủy']
         ];
+
+        // Dữ liệu khởi tạo
+        let scheduleGrid = JSON.parse(JSON.stringify(DEFAULT_GRID));
 
         let highlightedCells = {}; // Lưu trữ các ô vừa bị thay đổi
 
@@ -273,7 +295,7 @@ function doGet(e) {
         }
 
         // Tính toán chuỗi ngày trong tuần
-        function updateWeekDates(dateString = null) {
+        async function updateWeekDates(dateString = null) {
             const inputStart = document.getElementById('week-start');
             if (dateString) {
                 inputStart.value = dateString.substring(0, 10);
@@ -295,7 +317,14 @@ function doGet(e) {
             weekEnd = end.toISOString().split('T')[0];
             document.getElementById('week-end').value = weekEnd;
 
+            // Xóa highlight khi chuyển tuần
+            highlightedCells = {};
             renderTable();
+            
+            // Tự động tải dữ liệu của tuần mới từ Sheets (nếu đã kết nối API)
+            if (getApiUrl(true)) {
+                await loadFromGoogleSheets(weekStart);
+            }
         }
 
         // Thêm log vào lịch sử
@@ -461,14 +490,13 @@ function doGet(e) {
 
         // --- KẾT NỐI GOOGLE SHEETS API ---
 
-        function getApiUrl() {
+        function getApiUrl(silent = false) {
             const url = document.getElementById('api-url').value.trim();
-            if(!url) {
+            if(!url && !silent) {
                 alert("Vui lòng thiết lập Đường link API (Apps Script) trước!");
                 toggleSetupModal();
-                return null;
             }
-            return url;
+            return url || null;
         }
 
         async function saveToGoogleSheets() {
@@ -486,59 +514,65 @@ function doGet(e) {
             };
 
             try {
-                // Fetch POST. Với Google Apps Script, dùng text/plain để tránh lỗi CORS preflight
+                // Đã chuyển thành chuẩn gửi POST dạng "action: save"
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ action: 'save', data: payload })
                 });
                 
                 const result = await response.json();
                 if(result.status === 'success') {
-                    alert("Đã lưu dữ liệu lên Google Sheets thành công!");
+                    alert(`Đã lưu thành công!\nDữ liệu được đẩy vào Tab: "${result.sheet}" trên Google Sheets.`);
                     document.getElementById('last-sync-time').innerText = "Cập nhật cuối: " + new Date().toLocaleTimeString('vi-VN');
                     highlightedCells = {}; // Xóa highlight sau khi lưu thành công
                     renderTable();
                 } else {
-                    alert("Có lỗi xảy ra từ phía Server.");
+                    alert("Có lỗi xảy ra từ phía Server: " + result.message);
                 }
             } catch(error) {
                 console.error("Lỗi POST:", error);
-                // Vì cơ chế no-cors hoặc redirects của GAS, đôi khi fetch văng catch nhưng data vẫn vào.
                 alert("Đã gửi lệnh lưu. Hãy kiểm tra file Google Sheets của bạn. (Lưu ý: Nếu gặp lỗi CORS, hãy đảm bảo bạn đã Deploy Web App dưới dạng 'Anyone').");
             } finally {
                 hideLoading();
             }
         }
 
-        async function loadFromGoogleSheets() {
+        async function loadFromGoogleSheets(targetWeek = weekStart) {
             const url = getApiUrl();
             if(!url) return;
 
-            showLoading("Đang tải dữ liệu từ Google Sheets...");
+            showLoading("Đang tải dữ liệu tuần này từ Google Sheets...");
 
             try {
-                const response = await fetch(url, { method: 'GET' });
+                // Đã chuyển thành gửi POST với "action: load" kèm theo thông tin Tuần
+                const response = await fetch(url, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'load', weekStart: targetWeek })
+                });
                 const result = await response.json();
                 
                 if(result.status === 'success' && result.grid && result.grid.length > 0) {
                     scheduleGrid = result.grid;
                     highlightedCells = {}; // Xóa highlight
                     
-                    // Nạp thông tin tuần
-                    if(result.weekStart) updateWeekDates(result.weekStart);
-                    
                     // Nạp lịch sử
-                    if(result.logs) {
-                        historyLogs = result.logs;
-                        renderHistory();
-                    }
-
-                    renderTable();
+                    historyLogs = result.logs || [];
+                    
                     document.getElementById('last-sync-time').innerText = "Tải xuống lúc: " + new Date().toLocaleTimeString('vi-VN');
+                } else if (result.status === 'empty') {
+                    // Nếu tuần này chưa có trên Sheets -> Reset về bảng mặc định
+                    scheduleGrid = JSON.parse(JSON.stringify(DEFAULT_GRID));
+                    historyLogs = [];
+                    highlightedCells = {};
+                    document.getElementById('last-sync-time').innerText = "Tuần mới (Chưa lưu trên Sheets)";
                 } else {
-                    alert("Dữ liệu trống hoặc lỗi định dạng.");
+                    alert("Có lỗi khi đọc dữ liệu: " + result.message);
                 }
+                
+                renderHistory();
+                renderTable();
             } catch (error) {
                 console.error("Lỗi GET:", error);
                 alert("Không thể đọc dữ liệu. Kiểm tra lại đường link API hoặc quyền truy cập của Web App.");
