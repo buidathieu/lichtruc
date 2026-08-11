@@ -41,6 +41,12 @@
             @page { size: A4 portrait; margin: 15mm; }
         }
         #print-container { display: none; font-family: 'Times New Roman', Times, serif; color: black; }
+        
+        /* CSS bổ sung viền đậm nét cho bảng in */
+        #print-container table, #print-container th, #print-container td {
+            border: 1px solid black !important;
+            border-collapse: collapse !important;
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -340,9 +346,9 @@ function doPost(e) {
         <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
             <div style="text-align: center; line-height: 1.2;">
                 <div style="font-size: 13pt;">UBND XÃ MỘ ĐỨC</div>
-                <div style="font-weight: bold; font-size: 13pt;">TRẠM Y TẾ XÃ MỘ ĐỨC</div>
+                <div style="font-weight: bold; font-size: 13pt;">TRẠM Y TẾ XÃ</div>
                 <div style="border-top: 1px solid black; width: 40%; margin: 4px auto;"></div>
-                <div style="font-size: 13pt; margin-top: 5px;">Số: 06/LT-TYT</div>
+                <div style="font-size: 13pt; margin-top: 5px;">Số: ....../LT-TYT</div>
             </div>
             <div style="text-align: center; line-height: 1.2;">
                 <div style="font-weight: bold; font-size: 13pt;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
@@ -359,7 +365,7 @@ function doPost(e) {
         </div>
 
         <!-- Bảng Dữ Liệu -->
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; text-align: center;" border="1">
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; text-align: center;">
             <thead>
                 <tr>
                     <th style="padding: 10px 4px; font-weight: bold; width: 8%;">Thứ</th>
