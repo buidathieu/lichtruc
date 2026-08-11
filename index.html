@@ -394,10 +394,10 @@ function doPost(e) {
     <div id="print-container" class="text-[14pt] leading-tight">
         
         <!-- Header Hành Chính -->
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+        <div id="print-header" style="display: flex; justify-content: space-between; margin-bottom: 20px;">
             <div style="text-align: center; line-height: 1.2;">
                 <div style="font-size: 13pt;">UBND XÃ MỘ ĐỨC</div>
-                <div style="font-weight: bold; font-size: 13pt;">TRẠM Y TẾ</div>
+                <div style="font-weight: bold; font-size: 13pt;">TRẠM Y TẾ XÃ</div>
                 <div style="border-top: 1px solid black; width: 40%; margin: 4px auto;"></div>
                 <div style="font-size: 13pt; margin-top: 5px;">Số: ....../LT-TYT</div>
             </div>
@@ -410,13 +410,13 @@ function doPost(e) {
         </div>
 
         <!-- Tiêu đề Văn Bản -->
-        <div style="text-align: center; margin-bottom: 20px; line-height: 1.4;">
-            <div style="font-weight: bold; font-size: 16pt;">LỊCH TRỰC TRẠM Y TẾ XÃ MỘ ĐỨC</div>
+        <div id="print-title" style="text-align: center; margin-bottom: 20px; line-height: 1.4;">
+            <div style="font-weight: bold; font-size: 16pt;">LỊCH TRỰC TRẠM Y TẾ XÃ</div>
             <div style="font-style: italic;" id="print-subtitle">(Thay đổi từ ngày ... đến ngày ...)</div>
         </div>
 
         <!-- Bảng Dữ Liệu -->
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; text-align: center;">
+        <table id="print-table" style="width: 100%; border-collapse: collapse; margin-bottom: 15px; text-align: center;">
             <thead>
                 <tr>
                     <th style="padding: 10px 4px; font-weight: bold; width: 8%;">Thứ</th>
@@ -433,7 +433,7 @@ function doPost(e) {
         </table>
 
         <!-- Ghi chú -->
-        <div style="margin-bottom: 30px; line-height: 1.4; font-size: 13pt;">
+        <div id="print-note" style="margin-bottom: 30px; line-height: 1.4; font-size: 13pt;">
             <span style="font-weight: bold;">Ghi chú:</span><br>
             - Thời gian trực: Từ 07 giờ ngày hôm nay đến 07 giờ ngày hôm sau.<br>
             - Lịch trực thay đổi lần ...
@@ -451,7 +451,7 @@ function doPost(e) {
                 </div>
             </div>
             <div style="text-align: center;">
-                <div style="font-weight: bold; margin-bottom: 100px; font-size: 14pt;">GIÁM ĐỐC</div>
+                <div id="print-footer-space" style="font-weight: bold; margin-bottom: 100px; font-size: 14pt;">GIÁM ĐỐC</div>
                 <div style="font-weight: bold; font-size: 14pt;">Phạm Minh Đức</div>
             </div>
         </div>
@@ -1085,19 +1085,42 @@ function doPost(e) {
 
             const inDays = ['CN', 'Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy']; 
 
+            // --- ĐIỀU CHỈNH CO GIÃN ĐỂ IN VỪA TRANG A4 ---
+            const isTwoWeeks = datesToPrint.length === 14;
+            const isMonth = datesToPrint.length >= 28;
+
+            // Thu nhỏ padding và font size nếu in nhiều ngày
+            const cellPadding = isMonth ? '3px' : (isTwoWeeks ? '4px' : '10px');
+            const fontSize = isMonth ? '11pt' : (isTwoWeeks ? '12pt' : '14pt');
+            const thPadding = isMonth ? '4px' : (isTwoWeeks ? '6px 4px' : '10px 4px');
+
+            // Áp dụng cỡ chữ cho bảng
+            const table = document.getElementById('print-table');
+            table.style.fontSize = fontSize;
+            
+            // Áp dụng padding cho tiêu đề cột (th)
+            const ths = table.querySelectorAll('th');
+            ths.forEach(th => th.style.padding = thPadding);
+
+            // Ép các khoảng cách margin (khoảng trắng) để tiết kiệm không gian giấy A4
+            document.getElementById('print-header').style.marginBottom = isTwoWeeks || isMonth ? '10px' : '20px';
+            document.getElementById('print-title').style.marginBottom = isTwoWeeks || isMonth ? '10px' : '20px';
+            document.getElementById('print-note').style.marginBottom = isTwoWeeks || isMonth ? '15px' : '30px';
+            document.getElementById('print-footer-space').style.marginBottom = isTwoWeeks || isMonth ? '60px' : '100px';
+
             datesToPrint.forEach(d => {
                 const tr = document.createElement('tr');
                 const dateStr = getLocalISODate(d);
                 
                 // Cột Thứ
                 const tdThu = document.createElement('td');
-                tdThu.style.padding = '8px';
+                tdThu.style.padding = cellPadding;
                 tdThu.innerText = inDays[d.getDay()];
                 tr.appendChild(tdThu);
 
                 // Cột Ngày
                 const tdNgay = document.createElement('td');
-                tdNgay.style.padding = '8px';
+                tdNgay.style.padding = cellPadding;
                 tdNgay.innerText = d.getDate().toString().padStart(2, '0');
                 tr.appendChild(tdNgay);
 
@@ -1105,7 +1128,7 @@ function doPost(e) {
                 const rowData = dateMap[dateStr] || ['', '', '', ''];
                 for (let r = 0; r < 4; r++) {
                     const tdName = document.createElement('td');
-                    tdName.style.padding = '8px';
+                    tdName.style.padding = cellPadding;
                     tdName.innerText = rowData[r];
                     tr.appendChild(tdName);
                 }
