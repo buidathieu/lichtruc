@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tra Cứu Lịch Trực - TYT Xã Mộ Đức</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0fdf4; } /* Nền xanh lá nhạt dịu mắt */
+        
+        /* Highlight cột ngày hôm nay */
+        .today-col { background-color: #dcfce7 !important; border-left: 2px solid #22c55e !important; border-right: 2px solid #22c55e !important; }
+        .today-header { background-color: #22c55e !important; color: white !important; }
+        
+        /* Ẩn thanh cuộn nhưng vẫn cuộn được */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        #loading-overlay { display: none; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #22c55e;
+            border-radius: 50%;
+            width: 40px; height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- OVERLAY LOADING -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+        <div class="loader mb-4"></div>
+        <p class="text-green-600 font-semibold text-lg animate-pulse">Đang cập nhật lịch mới nhất...</p>
+    </div>
+
+    <div class="max-w-5xl mx-auto p-3 md:p-6 h-screen flex flex-col">
+        
+        <!-- Header -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4 flex justify-between items-center relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-full blur-3xl -mr-10 -mt-10"></div>
+            <div class="relative z-10">
+                <h1 class="text-xl md:text-2xl font-bold text-green-700 leading-tight">
+                    <i class="fa-solid fa-hospital text-green-600 mr-2"></i>TYT Xã Mộ Đức
+                </h1>
+                <p class="text-sm text-gray-500 mt-0.5">Cổng tra cứu lịch trực nhân viên</p>
+            </div>
+            <button onclick="toggleSetupModal()" class="relative z-10 text-gray-400 hover:text-green-600 p-2" title="Cài đặt kết nối">
+                <i class="fa-solid fa-sliders text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden relative">
+            
+            <!-- Navigation -->
+            <div class="p-3 bg-green-50/50 border-b border-gray-100 flex items-center justify-between gap-2">
+                <button onclick="changeWeek(-1)" class="w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-full shadow-sm text-gray-600 hover:bg-green-50 hover:text-green-600 transition active:scale-95">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                
+                <div class="flex-1 flex flex-col items-center justify-center bg-white py-1.5 px-4 border border-gray-200 rounded-xl shadow-sm">
+                    <span class="text-xs text-gray-500 font-medium uppercase tracking-wider mb-0.5">Tuần Trực</span>
+                    <div class="flex items-center gap-2 font-bold text-gray-800 text-sm md:text-base">
+                        <span id="display-start">--/--</span>
+                        <i class="fa-solid fa-arrow-right-long text-gray-300 text-xs"></i>
+                        <span id="display-end">--/--</span>
+                    </div>
+                </div>
+
+                <button onclick="changeWeek(1)" class="w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-full shadow-sm text-gray-600 hover:bg-green-50 hover:text-green-600 transition active:scale-95">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+
+            <!-- Table (Responsive / Scrollable) -->
+            <div class="flex-1 overflow-auto no-scrollbar bg-gray-50/30 p-2 md:p-4">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-w-[800px]">
+                    <table class="w-full text-sm text-left border-collapse">
+                        <thead>
+                            <tr id="table-header">
+                                <!-- Render bằng JS -->
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Render bằng JS -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                    <h3 class="font-bold text-gray-700 text-xs mb-2 uppercase tracking-wide"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Ghi chú thay đổi gần nhất</h3>
+                    <div id="history-list" class="space-y-1.5 text-xs text-gray-600 max-h-[100px] overflow-y-auto pr-2">
+                        <!-- Lịch sử đổ vào đây -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer / Status -->
+            <div class="bg-gray-50 p-3 text-[11px] text-gray-500 flex justify-between items-center border-t">
+                <span class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    Dữ liệu trực tuyến từ máy chủ
+                </span>
+                <span id="last-sync-time" class="font-medium">Chưa đồng bộ</span>
+            </div>
+            
+            <!-- Nút Refresh Nổi (FAB) -->
+            <button onclick="loadFromGoogleSheets()" class="absolute bottom-12 right-4 md:bottom-16 md:right-8 w-12 h-12 bg-green-600 text-white rounded-full shadow-lg shadow-green-600/30 flex items-center justify-center hover:bg-green-700 hover:scale-105 transition active:scale-95">
+                <i class="fa-solid fa-arrows-rotate text-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL THIẾT LẬP KẾT NỐI (Chỉ dùng lần đầu) -->
+    <div id="setup-modal" class="fixed inset-0 bg-black/50 z-40 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-lg text-gray-800"><i class="fa-solid fa-link text-green-600 mr-2"></i>Kết nối Dữ liệu</h3>
+                <button onclick="toggleSetupModal()" class="text-gray-400 hover:text-red-500 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="p-5">
+                <p class="text-sm text-gray-600 mb-4">Dán đường link API (Google Apps Script) của ứng dụng quản lý vào đây để nhân viên có thể xem lịch.</p>
+                <input type="text" id="api-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition text-sm">
+                
+                <div class="mt-4 p-3 bg-blue-50 text-blue-800 rounded-xl text-xs border border-blue-100 flex gap-2">
+                    <i class="fa-solid fa-lightbulb text-blue-500 mt-0.5 text-base"></i>
+                    <p><strong>Mẹo chia sẻ nhanh:</strong> Sau khi lưu, bạn có thể copy nguyên đường link trang web này gửi vào Zalo. Mọi người bấm vào sẽ xem được luôn mà không cần dán lại API.</p>
+                </div>
+            </div>
+            
+            <div class="p-4 bg-gray-50 flex justify-end">
+                <button onclick="saveApiUrl()" class="px-6 py-2.5 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition shadow-sm w-full md:w-auto">
+                    Kết nối ngay
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CẤU HÌNH CƠ BẢN ---
+        const DAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+        const ROLES = [
+            'Điểm trạm chính (Đức Tân)', 
+            'Điểm y tế số 1 (Mộ Đức)', 
+            'Điểm y tế số 2 (Đức Hòa)', 
+            'Điểm y tế số 3 (Đức Phú)'
+        ];
+
+        let scheduleGrid = [
+            ['Điểm trạm chính (Đức Tân)', '-', '-', '-', '-', '-', '-', '-'],
+            ['Điểm y tế số 1 (Mộ Đức)', '-', '-', '-', '-', '-', '-', '-'],
+            ['Điểm y tế số 2 (Đức Hòa)', '-', '-', '-', '-', '-', '-', '-'],
+            ['Điểm y tế số 3 (Đức Phú)', '-', '-', '-', '-', '-', '-', '-']
+        ];
+
+        let weekStart = '';
+        let weekDates = []; 
+        let historyLogs = [];
+
+        // Tiện ích xử lý Date tránh lỗi múi giờ
+        function getLocalISODate(d) {
+            const localD = new Date(d);
+            localD.setMinutes(localD.getMinutes() - localD.getTimezoneOffset());
+            return localD.toISOString().split('T')[0];
+        }
+
+        // --- KHỞI TẠO ---
+        function initApp() {
+            // 1. Lấy API URL từ Param (Nếu chia sẻ qua link) hoặc từ LocalStorage
+            const urlParams = new URLSearchParams(window.location.search);
+            const apiFromUrl = urlParams.get('api');
+            
+            if (apiFromUrl) {
+                localStorage.setItem('lichTrucApiUrl_Viewer', apiFromUrl);
+                // Xóa param trên thanh địa chỉ cho gọn
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            const savedUrl = localStorage.getItem('lichTrucApiUrl_Viewer');
+            if(savedUrl) {
+                document.getElementById('api-url').value = savedUrl;
+            } else {
+                // Mở sẵn modal nếu chưa có kết nối
+                toggleSetupModal();
+            }
+
+            // 2. Set tuần mặc định là tuần hiện tại
+            const today = new Date();
+            const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1; // Thứ 2 là 0
+            const monday = new Date(today.getTime() - (dayOfWeek * 24 * 60 * 60 * 1000));
+            
+            updateWeekDates(getLocalISODate(monday));
+        }
+
+        function updateWeekDates(dateString) {
+            const start = new Date(dateString);
+            weekStart = dateString;
+            weekDates = [];
+
+            for(let i = 0; i < 7; i++) {
+                const d = new Date(start);
+                d.setDate(start.getDate() + i);
+                weekDates.push({
+                    dateObj: d,
+                    display: d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+                    iso: getLocalISODate(d)
+                });
+            }
+
+            // Cập nhật text hiển thị (Ví dụ: 10/08 -> 16/08)
+            document.getElementById('display-start').innerText = weekDates[0].display;
+            document.getElementById('display-end').innerText = weekDates[6].display;
+
+            renderTable();
+            
+            // Tự động tải nếu đã có link API
+            if (document.getElementById('api-url').value.trim()) {
+                loadFromGoogleSheets(weekStart);
+            }
+        }
+
+        function changeWeek(offset) {
+            const currentStart = new Date(weekStart);
+            currentStart.setDate(currentStart.getDate() + (offset * 7));
+            updateWeekDates(getLocalISODate(currentStart));
+        }
+
+        // --- GIAO DIỆN ---
+        function renderTable() {
+            const todayISO = getLocalISODate(new Date());
+
+            // 1. Render Header
+            const headerRow = document.getElementById('table-header');
+            headerRow.innerHTML = `<th class="p-3 bg-gray-100 text-gray-600 font-bold w-32 md:w-48 sticky left-0 z-20 border-b border-gray-200 shadow-[1px_0_0_0_#e5e7eb]">Vị trí</th>`;
+            
+            DAYS.forEach((day, index) => {
+                const dateData = weekDates[index];
+                const isToday = dateData && dateData.iso === todayISO;
+                const isWeekend = day === 'Thứ 7' || day === 'CN';
+                
+                const classes = isToday 
+                    ? "p-3 text-center min-w-[90px] border-b border-gray-200 today-header rounded-t-lg"
+                    : `p-3 text-center font-bold min-w-[90px] border-b border-gray-200 ${isWeekend ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-700'}`;
+
+                const dateHtml = dateData ? `<div class="text-[11px] font-normal mt-0.5 ${isToday ? 'text-green-100' : (isWeekend ? 'text-red-400' : 'text-gray-500')}">${dateData.display}</div>` : '';
+                headerRow.innerHTML += `<th class="${classes}">${day} ${dateHtml}</th>`;
+            });
+
+            // 2. Render Body
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            scheduleGrid.forEach((row, rowIndex) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50/50 transition-colors border-b border-gray-100";
+                
+                // Cột Vị trí (Sticky ghim bên trái)
+                const tdRole = document.createElement('td');
+                tdRole.className = "p-3 font-semibold text-gray-700 bg-white sticky left-0 z-10 shadow-[1px_0_0_0_#e5e7eb] text-xs md:text-sm";
+                tdRole.innerText = row[0];
+                tr.appendChild(tdRole);
+
+                // Các cột Người trực
+                for(let colIndex = 1; colIndex <= DAYS.length; colIndex++) {
+                    const td = document.createElement('td');
+                    const dateData = weekDates[colIndex - 1];
+                    const isToday = dateData && dateData.iso === todayISO;
+                    const isWeekend = DAYS[colIndex - 1] === 'Thứ 7' || DAYS[colIndex - 1] === 'CN';
+                    
+                    // Nền đỏ nhạt cho toàn bộ cột (nếu không phải ngày hôm nay)
+                    const bgClass = (!isToday && isWeekend) ? 'bg-red-50/30' : '';
+                    td.className = `p-2 text-center text-xs md:text-sm font-medium ${isToday ? 'today-col' : bgClass}`;
+                    
+                    const name = row[colIndex] || '-';
+                    // Định dạng tên
+                    let nameHtml = name;
+                    if(name !== '-') {
+                        // Badge đỏ nếu là cuối tuần
+                        const badgeClass = (!isToday && isWeekend) 
+                            ? 'bg-red-50 text-red-700 border-red-200' 
+                            : 'bg-gray-100 text-gray-700 border-gray-200';
+                            
+                        nameHtml = `<span class="inline-block px-2 py-1.5 rounded-md border w-full whitespace-nowrap shadow-sm ${badgeClass}">${name}</span>`;
+                    } else {
+                        nameHtml = `<span class="inline-block px-2 py-1.5 text-gray-300">-</span>`;
+                    }
+                    
+                    td.innerHTML = nameHtml;
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-list');
+            if(!historyLogs || historyLogs.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 italic">Không có thay đổi nào trong tuần này.</p>';
+                return;
+            }
+            container.innerHTML = historyLogs.slice(0, 10).map(log => 
+                `<div class="flex items-start gap-2 py-1">
+                    <i class="fa-solid fa-circle-check text-green-500 mt-0.5 text-[10px]"></i>
+                    <span class="flex-1">${log}</span>
+                </div>`
+            ).join('');
+        }
+
+        // --- KẾT NỐI API ĐỌC DỮ LIỆU ---
+        async function loadFromGoogleSheets(targetWeek = weekStart) {
+            const url = document.getElementById('api-url').value.trim();
+            if(!url) {
+                toggleSetupModal();
+                return;
+            }
+
+            document.getElementById('loading-overlay').style.display = 'flex';
+
+            try {
+                const response = await fetch(url, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'load', weekStart: targetWeek })
+                });
+                const result = await response.json();
+                
+                if(result.status === 'success' && result.grid && result.grid.length > 0) {
+                    scheduleGrid = result.grid;
+                    historyLogs = result.logs || [];
+                } else {
+                    // Xóa trắng bảng nếu tuần chưa có dữ liệu
+                    scheduleGrid = ROLES.map(role => [role, '-', '-', '-', '-', '-', '-', '-']);
+                    historyLogs = [];
+                }
+                
+                document.getElementById('last-sync-time').innerText = "Cập nhật lúc " + new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+                renderHistory();
+                renderTable();
+            } catch (error) {
+                console.error("Lỗi:", error);
+                alert("Không thể tải dữ liệu. Vui lòng kiểm tra lại kết nối mạng hoặc Link API.");
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
+        }
+
+        // --- TIỆN ÍCH ---
+        function toggleSetupModal() {
+            const modal = document.getElementById('setup-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function saveApiUrl() {
+            const url = document.getElementById('api-url').value.trim();
+            if(!url) {
+                alert("Vui lòng nhập đường link API!");
+                return;
+            }
+            localStorage.setItem('lichTrucApiUrl_Viewer', url);
+            
+            // Tự động gắn query param vào URL (Không làm tải lại trang)
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('api', url);
+            window.history.pushState({}, '', newUrl);
+
+            toggleSetupModal();
+            loadFromGoogleSheets(weekStart);
+        }
+
+        // Khởi chạy
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
