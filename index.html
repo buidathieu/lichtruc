@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch Trực Google Sheets</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .draggable { cursor: grab; }
+        .draggable:active { cursor: grabbing; }
+        .cell-highlight { animation: pulse-bg 2s infinite; border: 2px solid #3b82f6 !important; }
+        @keyframes pulse-bg {
+            0% { background-color: #eff6ff; }
+            50% { background-color: #dbeafe; }
+            100% { background-color: #eff6ff; }
+        }
+        /* Loading Overlay */
+        #loading-overlay { display: none; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- OVERLAY LOADING -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+        <div class="loader mb-4"></div>
+        <p class="text-blue-600 font-semibold text-lg" id="loading-text">Đang đồng bộ dữ liệu...</p>
+    </div>
+
+    <div class="max-w-7xl mx-auto p-4 md:p-8">
+        
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-blue-700"><i class="fa-solid fa-calendar-days mr-2"></i>Lịch Trực Liên Thông Sheets</h1>
+                <p class="text-sm text-gray-500 mt-1">Sử dụng HTML/JS thuần và Google Apps Script</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="toggleSetupModal()" class="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition">
+                    <i class="fa-solid fa-gear mr-1"></i> Thiết lập API
+                </button>
+                <button onclick="loadFromGoogleSheets()" class="px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 font-medium rounded-lg hover:bg-blue-100 transition shadow-sm">
+                    <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Tải dữ liệu
+                </button>
+                <button onclick="saveToGoogleSheets()" class="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition shadow-sm">
+                    <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu lên Sheets
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex flex-col lg:flex-row gap-6">
+            
+            <!-- Sidebar: Danh sách nhân sự -->
+            <div class="w-full lg:w-1/4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <h2 class="font-bold text-gray-700 mb-3 border-b pb-2"><i class="fa-solid fa-user-doctor mr-2"></i>Nhân sự</h2>
+                <p class="text-xs text-gray-500 mb-4">Kéo thả tên nhân sự vào bảng lịch trực bên phải.</p>
+                
+                <div class="space-y-2" id="staff-list">
+                    <!-- Sẽ được render bằng JS -->
+                </div>
+            </div>
+
+            <!-- Bảng Lịch Trực -->
+            <div class="w-full lg:w-3/4 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="overflow-x-auto p-4">
+                    <table class="w-full text-sm text-left border-collapse">
+                        <thead>
+                            <tr id="table-header">
+                                <!-- Render bằng JS -->
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Render bằng JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="bg-gray-50 p-3 text-xs text-gray-500 border-t flex justify-between">
+                    <span>* Dữ liệu hiện tại được lưu tạm trên trình duyệt. Hãy bấm "Lưu lên Sheets" để đồng bộ.</span>
+                    <span id="last-sync-time">Chưa đồng bộ</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL THIẾT LẬP -->
+    <div id="setup-modal" class="fixed inset-0 bg-black/50 z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-link text-blue-600 mr-2"></i>Thiết lập Google Sheets API</h3>
+                <button onclick="toggleSetupModal()" class="text-gray-400 hover:text-red-500"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <div class="p-5 overflow-y-auto">
+                <div class="mb-4">
+                    <label class="block font-medium text-gray-700 mb-2">Đường link API (Web App URL):</label>
+                    <input type="text" id="api-url" placeholder="https://script.google.com/macros/s/AKfycby.../exec" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">Dán đường link Apps Script của bạn vào đây để ứng dụng có thể đọc/ghi dữ liệu.</p>
+                </div>
+
+                <div class="border-t pt-4">
+                    <h4 class="font-bold text-gray-800 mb-2">Hướng dẫn tạo API (3 phút):</h4>
+                    <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700 mb-4">
+                        <li>Tạo một file <strong>Google Sheets</strong> mới.</li>
+                        <li>Chọn menu <strong>Tiện ích mở rộng</strong> > <strong>Apps Script</strong>.</li>
+                        <li>Xóa code cũ, dán đoạn code dưới đây vào và lưu lại.</li>
+                        <li>Bấm <strong>Triển khai (Deploy)</strong> > <strong>Triển khai mới</strong>.</li>
+                        <li>Chọn <strong>Ứng dụng Web</strong>. Quyền truy cập: <strong>Bất kỳ ai</strong>.</li>
+                        <li>Copy URL được cấp và dán vào ô bên trên.</li>
+                    </ol>
+
+                    <div class="relative">
+                        <button onclick="copyScriptCode()" class="absolute right-2 top-2 bg-gray-700 text-white text-xs px-2 py-1 rounded hover:bg-gray-800">Copy Code</button>
+                        <textarea id="script-code" readonly class="w-full h-48 p-3 bg-gray-900 text-green-400 font-mono text-xs rounded-lg outline-none" style="resize: none;">
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    
+    // Ghi tiêu đề các ngày vào dòng 2
+    if(data.days) {
+      var headerRow = ["Vị trí"].concat(data.days);
+      sheet.getRange(2, 1, 1, headerRow.length).setValues([headerRow]).setFontWeight("bold");
+    }
+
+    // Ghi dữ liệu bảng vào từ dòng 3
+    if (data.grid && data.grid.length > 0) {
+      sheet.getRange(3, 1, data.grid.length, data.grid[0].length).setValues(data.grid);
+    }
+    
+    // Cập nhật thời gian
+    sheet.getRange("A1").setValue("Cập nhật cuối: " + new Date().toLocaleString());
+    
+    return ContentService.createTextOutput(JSON.stringify({"status": "success"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({"status": "error"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    // Lấy 5 dòng, 8 cột (1 cột vị trí + 7 cột ngày) bắt đầu từ dòng 3
+    var gridData = sheet.getRange(3, 1, 5, 8).getValues();
+    
+    return ContentService.createTextOutput(JSON.stringify({"status": "success", "grid": gridData}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({"status": "error"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+                        </textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t bg-gray-50 rounded-b-xl flex justify-end">
+                <button onclick="saveApiUrl()" class="px-5 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                    Lưu cấu hình
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CẤU HÌNH DỮ LIỆU ---
+        const DAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+        const ROLES = ['Trực Lãnh Đạo', 'Trực Cấp Cứu', 'Trực Ngoại', 'Trực Nội', 'ĐD Hành Chính'];
+        const STAFF = ['BS. Hùng', 'BS. An', 'BS. Tuấn', 'BS. Lan', 'ĐD. Thủy', 'BS. Dũng', 'BS. Bình', 'BS. Cường', 'ĐD. Thu'];
+
+        // Dữ liệu khởi tạo (Nếu chưa có dữ liệu từ Sheets)
+        let scheduleGrid = [
+            ['Trực Lãnh Đạo', 'BS. Hùng', 'BS. Dũng', 'BS. Hùng', 'BS. Dũng', 'BS. Hùng', 'BS. Dũng', 'BS. Hùng'],
+            ['Trực Cấp Cứu', 'BS. An', 'BS. Bình', 'BS. An', 'BS. Bình', 'BS. An', 'BS. Bình', 'BS. An'],
+            ['Trực Ngoại', 'BS. Tuấn', 'BS. Cường', 'BS. Tuấn', 'BS. Cường', 'BS. Tuấn', 'BS. Cường', 'BS. Tuấn'],
+            ['Trực Nội', 'BS. Lan', 'BS. Lan', 'BS. Lan', 'BS. Lan', 'BS. Lan', 'BS. Lan', 'BS. Lan'],
+            ['ĐD Hành Chính', 'ĐD. Thủy', 'ĐD. Thu', 'ĐD. Thủy', 'ĐD. Thu', 'ĐD. Thủy', 'ĐD. Thu', 'ĐD. Thủy']
+        ];
+
+        let highlightedCells = {}; // Lưu trữ các ô vừa bị thay đổi
+
+        // --- KHỞI TẠO GIAO DIỆN ---
+        function initApp() {
+            renderStaffList();
+            renderTable();
+            
+            // Lấy URL API từ LocalStorage nếu đã lưu trước đó
+            const savedUrl = localStorage.getItem('lichTrucApiUrl');
+            if(savedUrl) {
+                document.getElementById('api-url').value = savedUrl;
+            }
+        }
+
+        function renderStaffList() {
+            const container = document.getElementById('staff-list');
+            container.innerHTML = '';
+            STAFF.forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'draggable p-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300 transition flex items-center shadow-sm';
+                div.draggable = true;
+                div.innerHTML = `<i class="fa-solid fa-grip-vertical text-gray-400 mr-2"></i> ${name}`;
+                
+                // Sự kiện bắt đầu kéo
+                div.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('text/plain', name);
+                    e.target.style.opacity = '0.5';
+                });
+                div.addEventListener('dragend', function(e) {
+                    e.target.style.opacity = '1';
+                });
+
+                container.appendChild(div);
+            });
+        }
+
+        function renderTable() {
+            // Render Header
+            const headerRow = document.getElementById('table-header');
+            headerRow.innerHTML = `<th class="border-b-2 border-gray-300 p-3 bg-gray-100 text-gray-700 font-bold w-40">Vị trí</th>`;
+            DAYS.forEach(day => {
+                headerRow.innerHTML += `<th class="border-b-2 border-gray-300 p-3 bg-gray-100 text-center text-gray-700 font-bold min-w-[100px]">${day}</th>`;
+            });
+
+            // Render Body
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            scheduleGrid.forEach((row, rowIndex) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 border-b border-gray-200 transition-colors";
+                
+                // Cột Vị trí (Không cho drop)
+                const tdRole = document.createElement('td');
+                tdRole.className = "p-3 font-semibold text-gray-800 bg-white shadow-[1px_0_0_0_#e5e7eb] relative z-10";
+                tdRole.innerText = row[0];
+                tr.appendChild(tdRole);
+
+                // Các cột Ngày (Cho phép drop)
+                for(let colIndex = 1; colIndex <= DAYS.length; colIndex++) {
+                    const td = document.createElement('td');
+                    td.className = "p-2 text-center relative";
+                    
+                    const cellKey = `${rowIndex}-${colIndex}`;
+                    const isHighlighted = highlightedCells[cellKey];
+
+                    // Nội dung ô (Có thể kéo đi chỗ khác)
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = `p-2 rounded border-2 transition-all cursor-grab active:cursor-grabbing
+                        ${isHighlighted ? 'bg-blue-50 border-blue-400 text-blue-700 font-bold' : 'bg-white border-transparent hover:border-gray-300 text-gray-700'}`;
+                    contentDiv.draggable = true;
+                    contentDiv.innerText = row[colIndex] || '-';
+
+                    // Sự kiện kéo từ trong bảng ra
+                    contentDiv.addEventListener('dragstart', function(e) {
+                        e.dataTransfer.setData('text/plain', JSON.stringify({
+                            source: 'table',
+                            name: row[colIndex],
+                            r: rowIndex,
+                            c: colIndex
+                        }));
+                        setTimeout(() => contentDiv.classList.add('opacity-50'), 0);
+                    });
+                    contentDiv.addEventListener('dragend', function(e) {
+                        contentDiv.classList.remove('opacity-50');
+                    });
+
+                    // Sự kiện thả (Drop) vào ô này
+                    td.addEventListener('dragover', function(e) {
+                        e.preventDefault(); // Cần thiết để cho phép drop
+                        contentDiv.classList.add('border-green-400', 'bg-green-50');
+                    });
+                    td.addEventListener('dragleave', function(e) {
+                        contentDiv.classList.remove('border-green-400', 'bg-green-50');
+                    });
+                    
+                    td.addEventListener('drop', function(e) {
+                        e.preventDefault();
+                        contentDiv.classList.remove('border-green-400', 'bg-green-50');
+                        
+                        const dragDataRaw = e.dataTransfer.getData('text/plain');
+                        
+                        try {
+                            // Nếu kéo từ trong bảng (Swap/Đổi chỗ)
+                            const dragData = JSON.parse(dragDataRaw);
+                            if(dragData.source === 'table') {
+                                // Lấy tên người ở ô hiện tại
+                                const targetName = scheduleGrid[rowIndex][colIndex];
+                                
+                                // Đổi chỗ
+                                scheduleGrid[rowIndex][colIndex] = dragData.name;
+                                scheduleGrid[dragData.r][dragData.c] = targetName;
+                                
+                                // Đánh dấu 2 ô vừa đổi
+                                highlightedCells[`${rowIndex}-${colIndex}`] = true;
+                                highlightedCells[`${dragData.r}-${dragData.c}`] = true;
+                            }
+                        } catch(err) {
+                            // Nếu kéo từ danh sách bên ngoài (Chỉ là text)
+                            const newName = dragDataRaw;
+                            if(newName && STAFF.includes(newName)) {
+                                scheduleGrid[rowIndex][colIndex] = newName;
+                                highlightedCells[`${rowIndex}-${colIndex}`] = true;
+                            }
+                        }
+                        
+                        renderTable();
+                    });
+
+                    td.appendChild(contentDiv);
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- KẾT NỐI GOOGLE SHEETS API ---
+
+        function getApiUrl() {
+            const url = document.getElementById('api-url').value.trim();
+            if(!url) {
+                alert("Vui lòng thiết lập Đường link API (Apps Script) trước!");
+                toggleSetupModal();
+                return null;
+            }
+            return url;
+        }
+
+        async function saveToGoogleSheets() {
+            const url = getApiUrl();
+            if(!url) return;
+
+            showLoading("Đang đẩy dữ liệu lên Google Sheets...");
+            
+            const payload = {
+                days: DAYS,
+                grid: scheduleGrid
+            };
+
+            try {
+                // Fetch POST. Với Google Apps Script, dùng text/plain để tránh lỗi CORS preflight
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                if(result.status === 'success') {
+                    alert("Đã lưu dữ liệu lên Google Sheets thành công!");
+                    document.getElementById('last-sync-time').innerText = "Cập nhật cuối: " + new Date().toLocaleTimeString('vi-VN');
+                    highlightedCells = {}; // Xóa highlight sau khi lưu thành công
+                    renderTable();
+                } else {
+                    alert("Có lỗi xảy ra từ phía Server.");
+                }
+            } catch(error) {
+                console.error("Lỗi POST:", error);
+                // Vì cơ chế no-cors hoặc redirects của GAS, đôi khi fetch văng catch nhưng data vẫn vào.
+                alert("Đã gửi lệnh lưu. Hãy kiểm tra file Google Sheets của bạn. (Lưu ý: Nếu gặp lỗi CORS, hãy đảm bảo bạn đã Deploy Web App dưới dạng 'Anyone').");
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function loadFromGoogleSheets() {
+            const url = getApiUrl();
+            if(!url) return;
+
+            showLoading("Đang tải dữ liệu từ Google Sheets...");
+
+            try {
+                const response = await fetch(url, { method: 'GET' });
+                const result = await response.json();
+                
+                if(result.status === 'success' && result.grid && result.grid.length > 0) {
+                    scheduleGrid = result.grid;
+                    highlightedCells = {}; // Xóa highlight
+                    renderTable();
+                    document.getElementById('last-sync-time').innerText = "Tải xuống lúc: " + new Date().toLocaleTimeString('vi-VN');
+                } else {
+                    alert("Dữ liệu trống hoặc lỗi định dạng.");
+                }
+            } catch (error) {
+                console.error("Lỗi GET:", error);
+                alert("Không thể đọc dữ liệu. Kiểm tra lại đường link API hoặc quyền truy cập của Web App.");
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // --- CÁC HÀM TIỆN ÍCH ---
+        function toggleSetupModal() {
+            const modal = document.getElementById('setup-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function saveApiUrl() {
+            const url = document.getElementById('api-url').value.trim();
+            localStorage.setItem('lichTrucApiUrl', url);
+            toggleSetupModal();
+            // Optional: Auto load sau khi lưu link
+            if(url) loadFromGoogleSheets();
+        }
+
+        function copyScriptCode() {
+            const code = document.getElementById('script-code');
+            code.select();
+            document.execCommand('copy');
+            alert("Đã copy mã nguồn Apps Script!");
+        }
+
+        function showLoading(text) {
+            document.getElementById('loading-text').innerText = text;
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+
+        // Khởi động app
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
