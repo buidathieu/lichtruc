@@ -47,6 +47,11 @@
             border: 1px solid black !important;
             border-collapse: collapse !important;
         }
+        @media print {
+            #print-container table { page-break-inside: auto; }
+            #print-container tr { page-break-inside: avoid; page-break-after: auto; }
+            #print-container thead { display: table-header-group; }
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -73,7 +78,7 @@
                 <button onclick="toggleExportModal()" class="px-3 py-2 bg-purple-50 text-purple-700 border border-purple-200 font-medium rounded-lg hover:bg-purple-100 transition shadow-sm text-sm">
                     <i class="fa-solid fa-file-excel mr-1"></i> Xuất Lịch Tháng
                 </button>
-                <button onclick="prepareAndPrint()" class="px-3 py-2 bg-red-50 text-red-700 border border-red-200 font-medium rounded-lg hover:bg-red-100 transition shadow-sm text-sm">
+                <button onclick="togglePrintModal()" class="px-3 py-2 bg-red-50 text-red-700 border border-red-200 font-medium rounded-lg hover:bg-red-100 transition shadow-sm text-sm">
                     <i class="fa-solid fa-file-pdf mr-1"></i> In PDF (Trình ký)
                 </button>
                 <button onclick="loadFromGoogleSheets()" class="px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 font-medium rounded-lg hover:bg-blue-100 transition shadow-sm text-sm">
@@ -339,6 +344,52 @@ function doPost(e) {
         </div>
     </div>
 
+    <!-- MODAL IN LỊCH TRỰC -->
+    <div id="print-modal" class="fixed inset-0 bg-black/50 z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center bg-red-50 rounded-t-xl">
+                <h3 class="font-bold text-lg text-red-800"><i class="fa-solid fa-file-pdf mr-2"></i>Tùy chọn In Lịch Trực</h3>
+                <button onclick="togglePrintModal()" class="text-gray-400 hover:text-red-500"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <div class="p-5">
+                <p class="text-sm text-gray-600 mb-4">Bạn muốn tạo bản in cho khoảng thời gian nào?</p>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition border-red-200 bg-red-50/30">
+                        <input type="radio" name="print-range" value="1week" checked class="w-4 h-4 text-red-600 focus:ring-red-500">
+                        <span class="font-medium text-gray-800">1 Tuần (Tuần đang hiển thị)</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input type="radio" name="print-range" value="2weeks" class="w-4 h-4 text-red-600 focus:ring-red-500">
+                        <span class="font-medium text-gray-800">2 Tuần (Tuần hiện tại & Tuần sau)</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input type="radio" name="print-range" value="month" class="w-4 h-4 text-red-600 focus:ring-red-500">
+                        <span class="font-medium text-gray-800">Cả tháng</span>
+                    </label>
+                </div>
+                
+                <div id="print-month-selector" class="mt-4 hidden flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="w-1/2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tháng</label>
+                        <input type="number" id="print-month" min="1" max="12" class="w-full border border-gray-300 rounded-md p-2 outline-none focus:border-red-500">
+                    </div>
+                    <div class="w-1/2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Năm</label>
+                        <input type="number" id="print-year" min="2020" max="2030" class="w-full border border-gray-300 rounded-md p-2 outline-none focus:border-red-500">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t bg-gray-50 rounded-b-xl flex justify-end gap-2">
+                <button onclick="togglePrintModal()" class="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition">Hủy</button>
+                <button onclick="executePrint()" class="px-5 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition flex items-center">
+                    <i class="fa-solid fa-print mr-2"></i> Tạo bản in
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- BẢN IN PDF (TRÌNH KÝ) - BỊ ẨN TRÊN WEB, CHỈ HIỆN KHI XUẤT FILE -->
     <div id="print-container" class="text-[14pt] leading-tight">
         
@@ -346,7 +397,7 @@ function doPost(e) {
         <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
             <div style="text-align: center; line-height: 1.2;">
                 <div style="font-size: 13pt;">UBND XÃ MỘ ĐỨC</div>
-                <div style="font-weight: bold; font-size: 13pt;">TRẠM Y TẾ</div>
+                <div style="font-weight: bold; font-size: 13pt;">TRẠM Y TẾ XÃ</div>
                 <div style="border-top: 1px solid black; width: 40%; margin: 4px auto;"></div>
                 <div style="font-size: 13pt; margin-top: 5px;">Số: ....../LT-TYT</div>
             </div>
@@ -896,57 +947,172 @@ function doPost(e) {
         }
 
         // --- HÀM XUẤT PDF (IN TRÌNH KÝ CHUẨN FORM VĂN BẢN) ---
-        function prepareAndPrint() {
-            if (!weekStart || !weekEnd) {
+        function togglePrintModal() {
+            const modal = document.getElementById('print-modal');
+            modal.classList.toggle('hidden');
+            
+            if (!modal.classList.contains('hidden')) {
+                const today = new Date();
+                document.getElementById('print-month').value = today.getMonth() + 1;
+                document.getElementById('print-year').value = today.getFullYear();
+
+                // Lắng nghe sự kiện để hiện/ẩn bộ chọn Tháng
+                const radios = document.querySelectorAll('input[name="print-range"]');
+                radios.forEach(r => r.addEventListener('change', function() {
+                    // Cập nhật viền cho ô được chọn
+                    document.querySelectorAll('input[name="print-range"]').forEach(input => {
+                        input.parentElement.classList.remove('border-red-200', 'bg-red-50/30');
+                    });
+                    this.parentElement.classList.add('border-red-200', 'bg-red-50/30');
+
+                    if(this.value === 'month') {
+                        document.getElementById('print-month-selector').classList.remove('hidden');
+                    } else {
+                        document.getElementById('print-month-selector').classList.add('hidden');
+                    }
+                }));
+            }
+        }
+
+        // Tiện ích lấy đúng định dạng YYYY-MM-DD không bị lỗi múi giờ
+        function getLocalISODate(d) {
+            const localD = new Date(d);
+            localD.setMinutes(localD.getMinutes() - localD.getTimezoneOffset());
+            return localD.toISOString().split('T')[0];
+        }
+
+        async function executePrint() {
+            if (!weekStart) {
                 alert("Vui lòng đợi tải xong dữ liệu tuần trước khi in.");
                 return;
             }
 
-            // 1. Cập nhật ngày tháng năm hiện tại cho cụm chữ ký (Bên phải)
+            const option = document.querySelector('input[name="print-range"]:checked').value;
+            togglePrintModal();
+
+            const dateMap = {}; // Lưu trữ dữ liệu: key là 'YYYY-MM-DD', value là mảng tên
+            
+            // 1. Luôn ưu tiên đưa dữ liệu của màn hình hiện tại vào Map trước
+            const startD = new Date(weekStart);
+            for(let i=0; i<7; i++) {
+                const d = new Date(startD);
+                d.setDate(startD.getDate() + i);
+                const dateStr = getLocalISODate(d);
+                dateMap[dateStr] = [
+                    scheduleGrid[0] ? scheduleGrid[0][i+1] : '',
+                    scheduleGrid[1] ? scheduleGrid[1][i+1] : '',
+                    scheduleGrid[2] ? scheduleGrid[2][i+1] : '',
+                    scheduleGrid[3] ? scheduleGrid[3][i+1] : ''
+                ];
+            }
+
+            // 2. Nếu in > 1 tuần, kéo dữ liệu từ Google Sheets về bổ sung
+            if (option === '2weeks' || option === 'month') {
+                const url = getApiUrl(true);
+                if (url) {
+                    showLoading("Đang thu thập dữ liệu các tuần để tạo bản in...");
+                    try {
+                        const response = await fetch(url, { 
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'exportMonth' })
+                        });
+                        const result = await response.json();
+                        if(result.status === 'success') {
+                            result.data.forEach(week => {
+                                const wS = new Date(week.weekStart);
+                                if (isNaN(wS.getTime())) return;
+                                for(let i=0; i<7; i++) {
+                                    const d = new Date(wS);
+                                    d.setDate(wS.getDate() + i);
+                                    const dateStr = getLocalISODate(d);
+                                    // Bổ sung vào map (Không đè lên dữ liệu tuần hiện tại đang sửa)
+                                    if (!dateMap[dateStr]) {
+                                        dateMap[dateStr] = [
+                                            week.grid[0] ? week.grid[0][i+1] : '',
+                                            week.grid[1] ? week.grid[1][i+1] : '',
+                                            week.grid[2] ? week.grid[2][i+1] : '',
+                                            week.grid[3] ? week.grid[3][i+1] : ''
+                                        ];
+                                    }
+                                }
+                            });
+                        }
+                    } catch (error) {
+                        console.error("Lỗi lấy dữ liệu in:", error);
+                        alert("Không thể tải thêm dữ liệu tuần khác. Chỉ in dữ liệu tuần hiện tại.");
+                    } finally {
+                        hideLoading();
+                    }
+                }
+            }
+
+            // 3. Xác định chuỗi ngày cần in
+            const datesToPrint = [];
+            let subtitleStr = "";
+            const formatDateVn = (dObj) => `${dObj.getDate().toString().padStart(2, '0')}/${(dObj.getMonth()+1).toString().padStart(2, '0')}/${dObj.getFullYear()}`;
+
+            if (option === '1week') {
+                for(let i=0; i<7; i++) datesToPrint.push(new Date(startD.getTime() + i*24*60*60*1000));
+                subtitleStr = `(Thay đổi từ ngày ${formatDateVn(datesToPrint[0])} đến ngày ${formatDateVn(datesToPrint[6])})`;
+            } 
+            else if (option === '2weeks') {
+                for(let i=0; i<14; i++) datesToPrint.push(new Date(startD.getTime() + i*24*60*60*1000));
+                subtitleStr = `(Từ ngày ${formatDateVn(datesToPrint[0])} đến ngày ${formatDateVn(datesToPrint[13])})`;
+            } 
+            else if (option === 'month') {
+                const m = parseInt(document.getElementById('print-month').value);
+                const y = parseInt(document.getElementById('print-year').value);
+                const daysInMonth = new Date(y, m, 0).getDate();
+                for(let i=1; i<=daysInMonth; i++) {
+                    const d = new Date(y, m-1, i);
+                    datesToPrint.push(d);
+                }
+                subtitleStr = `(Lịch trực tháng ${m}/${y})`;
+            }
+
+            renderPrintTable(datesToPrint, dateMap, subtitleStr);
+        }
+
+        function renderPrintTable(datesToPrint, dateMap, subtitleStr) {
+            // Cập nhật Header
             const today = new Date();
             document.getElementById('print-date').innerText = `Mộ Đức, Ngày ${today.getDate().toString().padStart(2, '0')} tháng ${(today.getMonth() + 1).toString().padStart(2, '0')} năm ${today.getFullYear()}`;
+            document.getElementById('print-subtitle').innerText = subtitleStr;
 
-            // 2. Cập nhật tiêu đề từ ngày - đến ngày
-            const startParts = weekStart.split('-');
-            const endParts = weekEnd.split('-');
-            const startStr = `${startParts[2]}/${startParts[1]}/${startParts[0]}`;
-            const endStr = `${endParts[2]}/${endParts[1]}/${endParts[0]}`;
-            document.getElementById('print-subtitle').innerText = `(Lịch trực từ ngày ${startStr} đến ngày ${endStr})`;
-
-            // 3. Xây dựng nội dung bảng (Thuật toán đảo Hàng ngang thành Hàng dọc cho bản in)
             const tbody = document.getElementById('print-tbody');
             tbody.innerHTML = '';
 
-            const inDays = ['Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy', 'CN']; 
-            
-            for (let i = 0; i < 7; i++) {
+            const inDays = ['CN', 'Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy']; 
+
+            datesToPrint.forEach(d => {
                 const tr = document.createElement('tr');
+                const dateStr = getLocalISODate(d);
                 
-                // Cột 1: Thứ
+                // Cột Thứ
                 const tdThu = document.createElement('td');
                 tdThu.style.padding = '8px';
-                tdThu.innerText = inDays[i];
+                tdThu.innerText = inDays[d.getDay()];
                 tr.appendChild(tdThu);
 
-                // Cột 2: Ngày (Tách chữ VD: 10/08 -> 10)
+                // Cột Ngày
                 const tdNgay = document.createElement('td');
                 tdNgay.style.padding = '8px';
-                tdNgay.innerText = weekDates[i] ? weekDates[i].split('/')[0] : '';
+                tdNgay.innerText = d.getDate().toString().padStart(2, '0');
                 tr.appendChild(tdNgay);
 
-                // 4 Cột tiếp theo: Tên nhân sự tại 4 điểm y tế
+                // 4 Cột Điểm Y Tế
+                const rowData = dateMap[dateStr] || ['', '', '', ''];
                 for (let r = 0; r < 4; r++) {
                     const tdName = document.createElement('td');
                     tdName.style.padding = '8px';
-                    // scheduleGrid[r] là dữ liệu của Trạm r, lấy phần tử [i+1] (vì [0] là tên trạm)
-                    tdName.innerText = (scheduleGrid[r] && scheduleGrid[r][i+1]) ? scheduleGrid[r][i+1] : '';
+                    tdName.innerText = rowData[r];
                     tr.appendChild(tdName);
                 }
-
                 tbody.appendChild(tr);
-            }
+            });
 
-            // 4. Chờ 300ms để DOM cập nhật mượt mà sau đó bật Hộp thoại In/Lưu PDF của trình duyệt
+            // Chờ cập nhật DOM và gọi hộp thoại in
             setTimeout(() => {
                 window.print();
             }, 300);
