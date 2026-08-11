@@ -32,6 +32,15 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Khung in PDF - Tích hợp cấu trúc LaTeX */
+        @media print {
+            body { background-color: white; margin: 0; padding: 0; }
+            #app-container, #setup-modal, #export-modal, #loading-overlay { display: none !important; }
+            #print-container { display: block !important; }
+            @page { size: A4 portrait; margin: 15mm; }
+        }
+        #print-container { display: none; font-family: 'Times New Roman', Times, serif; color: black; }
     </style>
 </head>
 <body class="text-gray-800">
@@ -42,25 +51,29 @@
         <p class="text-blue-600 font-semibold text-lg" id="loading-text">Đang đồng bộ dữ liệu...</p>
     </div>
 
-    <div class="max-w-7xl mx-auto p-4 md:p-8">
+    <!-- MAIN APP CONTAINER (Sẽ bị ẩn đi khi bấm In) -->
+    <div id="app-container" class="max-w-7xl mx-auto p-4 md:p-8">
         
         <!-- Header -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl font-bold text-blue-700"><i class="fa-solid fa-calendar-days mr-2"></i>Lịch Trực Liên Thông Sheets</h1>
-                <p class="text-sm text-gray-500 mt-1">Sử dụng HTML/JS thuần và Google Apps Script</p>
+                <h1 class="text-2xl font-bold text-blue-700"><i class="fa-solid fa-calendar-days mr-2"></i>Lịch Trực Trạm Y Tế Xã Mộ Đức</h1>
+                <p class="text-sm text-gray-500 mt-1">Liên thông dữ liệu trực tiếp với Google Sheets</p>
             </div>
-            <div class="flex gap-2">
-                <button onclick="toggleSetupModal()" class="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition">
+            <div class="flex flex-wrap gap-2 justify-end">
+                <button onclick="toggleSetupModal()" class="px-3 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition text-sm">
                     <i class="fa-solid fa-gear mr-1"></i> Thiết lập API
                 </button>
-                <button onclick="toggleExportModal()" class="px-4 py-2 bg-purple-50 text-purple-700 border border-purple-200 font-medium rounded-lg hover:bg-purple-100 transition shadow-sm">
+                <button onclick="toggleExportModal()" class="px-3 py-2 bg-purple-50 text-purple-700 border border-purple-200 font-medium rounded-lg hover:bg-purple-100 transition shadow-sm text-sm">
                     <i class="fa-solid fa-file-excel mr-1"></i> Xuất Lịch Tháng
                 </button>
-                <button onclick="loadFromGoogleSheets()" class="px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 font-medium rounded-lg hover:bg-blue-100 transition shadow-sm">
+                <button onclick="prepareAndPrint()" class="px-3 py-2 bg-red-50 text-red-700 border border-red-200 font-medium rounded-lg hover:bg-red-100 transition shadow-sm text-sm">
+                    <i class="fa-solid fa-file-pdf mr-1"></i> In PDF (Trình ký)
+                </button>
+                <button onclick="loadFromGoogleSheets()" class="px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 font-medium rounded-lg hover:bg-blue-100 transition shadow-sm text-sm">
                     <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Tải dữ liệu
                 </button>
-                <button onclick="saveToGoogleSheets()" class="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition shadow-sm">
+                <button onclick="saveToGoogleSheets()" class="px-3 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition shadow-sm text-sm">
                     <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu lên Sheets
                 </button>
             </div>
@@ -320,19 +333,97 @@ function doPost(e) {
         </div>
     </div>
 
+    <!-- BẢN IN PDF (TRÌNH KÝ) - BỊ ẨN TRÊN WEB, CHỈ HIỆN KHI XUẤT FILE -->
+    <div id="print-container" class="text-[14pt] leading-tight">
+        
+        <!-- Header Hành Chính -->
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div style="text-align: center; line-height: 1.2;">
+                <div style="font-size: 13pt;">UBND XÃ MỘ ĐỨC</div>
+                <div style="font-weight: bold; font-size: 13pt;">TRẠM Y TẾ XÃ MỘ ĐỨC</div>
+                <div style="border-top: 1px solid black; width: 40%; margin: 4px auto;"></div>
+                <div style="font-size: 13pt; margin-top: 5px;">Số: 06/LT-TYT</div>
+            </div>
+            <div style="text-align: center; line-height: 1.2;">
+                <div style="font-weight: bold; font-size: 13pt;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                <div style="font-weight: bold; font-size: 13pt;">Độc lập - Tự do - Hạnh phúc</div>
+                <div style="border-top: 1px solid black; width: 50%; margin: 4px auto;"></div>
+                <div style="font-style: italic; font-size: 13pt; margin-top: 6px;" id="print-date">Mộ Đức, Ngày ... tháng ... năm ...</div>
+            </div>
+        </div>
+
+        <!-- Tiêu đề Văn Bản -->
+        <div style="text-align: center; margin-bottom: 20px; line-height: 1.4;">
+            <div style="font-weight: bold; font-size: 16pt;">LỊCH TRỰC TRẠM Y TẾ XÃ MỘ ĐỨC</div>
+            <div style="font-style: italic;" id="print-subtitle">(Thay đổi từ ngày ... đến ngày ...)</div>
+        </div>
+
+        <!-- Bảng Dữ Liệu -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; text-align: center;" border="1">
+            <thead>
+                <tr>
+                    <th style="padding: 10px 4px; font-weight: bold; width: 8%;">Thứ</th>
+                    <th style="padding: 10px 4px; font-weight: bold; width: 8%;">Ngày</th>
+                    <th style="padding: 10px 4px; font-weight: bold; width: 21%;">Điểm trạm chính<br>(Đức Tân)</th>
+                    <th style="padding: 10px 4px; font-weight: bold; width: 21%;">Điểm y tế số 1<br>(Mộ Đức)</th>
+                    <th style="padding: 10px 4px; font-weight: bold; width: 21%;">Điểm y tế số 2<br>(Đức Hòa)</th>
+                    <th style="padding: 10px 4px; font-weight: bold; width: 21%;">Điểm y tế số 3<br>(Đức Phú)</th>
+                </tr>
+            </thead>
+            <tbody id="print-tbody">
+                <!-- Nội dung được tự động nạp bằng JavaScript -->
+            </tbody>
+        </table>
+
+        <!-- Ghi chú -->
+        <div style="margin-bottom: 30px; line-height: 1.4; font-size: 13pt;">
+            <span style="font-weight: bold;">Ghi chú:</span><br>
+            - Thời gian trực: Từ 07 giờ ngày hôm nay đến 07 giờ ngày hôm sau.<br>
+            - Lịch trực thay đổi lần ...
+        </div>
+
+        <!-- Chữ ký & Nơi nhận -->
+        <div style="display: flex; justify-content: space-between;">
+            <div style="line-height: 1.3;">
+                <div style="font-weight: bold; font-style: italic; margin-bottom: 4px; font-size: 13pt;">Nơi nhận:</div>
+                <div style="font-size: 12pt;">
+                    - Bí thư, chi ủy chi bộ (đ/b);<br>
+                    - GĐ, PGD TYT xã (b/c);<br>
+                    - Các tổ, khoa, điểm y tế (t/h);<br>
+                    - Lưu: Hc-Ts-Ns.
+                </div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-weight: bold; margin-bottom: 100px; font-size: 14pt;">GIÁM ĐỐC</div>
+                <div style="font-weight: bold; font-size: 14pt;">Phạm Minh Đức</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- CẤU HÌNH DỮ LIỆU ---
         const DAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
-        const ROLES = ['Trực Lãnh Đạo', 'Trực Cấp Cứu', 'Trực Ngoại', 'Trực Nội', 'ĐD Hành Chính'];
-        const STAFF = ['BS. Hùng', 'BS. An', 'BS. Tuấn', 'BS. Lan', 'ĐD. Thủy', 'BS. Dũng', 'BS. Bình', 'BS. Cường', 'ĐD. Thu'];
+        const ROLES = [
+            'Điểm trạm chính (Đức Tân)', 
+            'Điểm y tế số 1 (Mộ Đức)', 
+            'Điểm y tế số 2 (Đức Hòa)', 
+            'Điểm y tế số 3 (Đức Phú)'
+        ];
+        
+        // Danh sách nhân sự được tổng hợp từ lịch phân công
+        const STAFF = [
+            'BS Đức', 'BS Nguyện', 'BS Phu', 'Bs Thuyên',
+            'ĐD Vinh', 'ĐD Trúc', 'ĐD Lài', 'ĐD Thanh', 'ĐD Nguyệt', 'ĐD Ly Va',
+            'NHS Trâm', 'NHS Tin', 'NHS Lan', 'NHS Thy', 'NHS Việt', 'NHS Bé', 'NHS Thuỷ', 'NHS Thắm',
+            'Ys Phương', 'Ys Vũ', 'Ys Thủy', 'Ys Tuệ', 'CN Thu'
+        ];
 
-        // Dữ liệu template gốc để reset khi sang tuần mới chưa có dữ liệu
+        // Dữ liệu template gốc để reset khi sang tuần mới chưa có dữ liệu (Lấy mẫu tuần 03/08 - 09/08/2026)
         const DEFAULT_GRID = [
-            ['Trực Lãnh Đạo', 'BS. Hùng', 'BS. Dũng', 'BS. Hùng', 'BS. Dũng', 'BS. Hùng', 'BS. Dũng', 'BS. Hùng'],
-            ['Trực Cấp Cứu', 'BS. An', 'BS. Bình', 'BS. An', 'BS. Bình', 'BS. An', 'BS. Bình', 'BS. An'],
-            ['Trực Ngoại', 'BS. Tuấn', 'BS. Cường', 'BS. Tuấn', 'BS. Cường', 'BS. Tuấn', 'BS. Cường', 'BS. Tuấn'],
-            ['Trực Nội', 'BS. Lan', 'BS. Lan', 'BS. Lan', 'BS. Lan', 'BS. Lan', 'BS. Lan', 'BS. Lan'],
-            ['ĐD Hành Chính', 'ĐD. Thủy', 'ĐD. Thu', 'ĐD. Thủy', 'ĐD. Thu', 'ĐD. Thủy', 'ĐD. Thu', 'ĐD. Thủy']
+            ['Điểm trạm chính (Đức Tân)', 'NHS Thy', 'Bs Thuyên', 'NHS Thuỷ', 'Ys Thủy', 'ĐD Vinh', 'BS Nguyện', 'NHS Thy'],
+            ['Điểm y tế số 1 (Mộ Đức)', 'ĐD Lài', 'NHS Việt', 'BS Đức', 'NHS Tin', 'ĐD Lài', 'NHS Việt', 'BS Đức'],
+            ['Điểm y tế số 2 (Đức Hòa)', 'BS Phu', 'ĐD Thanh', 'ĐD Trúc', 'Ys Phương', 'BS Phu', 'ĐD Thanh', 'NHS Thắm'],
+            ['Điểm y tế số 3 (Đức Phú)', 'Ys Vũ', 'NHS Bé', 'NHS Trâm', 'NHS Lan', 'Ys Vũ', 'NHS Bé', 'NHS Trâm']
         ];
 
         // Dữ liệu khởi tạo
@@ -796,6 +887,63 @@ function doPost(e) {
             
             // 6. Xuất và tự động tải file (Đặt tên giống yêu cầu: TRỰC T7.xls)
             XLSX.writeFile(wb, `TRỰC T${targetMonth}.xls`);
+        }
+
+        // --- HÀM XUẤT PDF (IN TRÌNH KÝ CHUẨN FORM VĂN BẢN) ---
+        function prepareAndPrint() {
+            if (!weekStart || !weekEnd) {
+                alert("Vui lòng đợi tải xong dữ liệu tuần trước khi in.");
+                return;
+            }
+
+            // 1. Cập nhật ngày tháng năm hiện tại cho cụm chữ ký (Bên phải)
+            const today = new Date();
+            document.getElementById('print-date').innerText = `Mộ Đức, Ngày ${today.getDate().toString().padStart(2, '0')} tháng ${(today.getMonth() + 1).toString().padStart(2, '0')} năm ${today.getFullYear()}`;
+
+            // 2. Cập nhật tiêu đề từ ngày - đến ngày
+            const startParts = weekStart.split('-');
+            const endParts = weekEnd.split('-');
+            const startStr = `${startParts[2]}/${startParts[1]}/${startParts[0]}`;
+            const endStr = `${endParts[2]}/${endParts[1]}/${endParts[0]}`;
+            document.getElementById('print-subtitle').innerText = `(Lịch trực từ ngày ${startStr} đến ngày ${endStr})`;
+
+            // 3. Xây dựng nội dung bảng (Thuật toán đảo Hàng ngang thành Hàng dọc cho bản in)
+            const tbody = document.getElementById('print-tbody');
+            tbody.innerHTML = '';
+
+            const inDays = ['Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy', 'CN']; 
+            
+            for (let i = 0; i < 7; i++) {
+                const tr = document.createElement('tr');
+                
+                // Cột 1: Thứ
+                const tdThu = document.createElement('td');
+                tdThu.style.padding = '8px';
+                tdThu.innerText = inDays[i];
+                tr.appendChild(tdThu);
+
+                // Cột 2: Ngày (Tách chữ VD: 10/08 -> 10)
+                const tdNgay = document.createElement('td');
+                tdNgay.style.padding = '8px';
+                tdNgay.innerText = weekDates[i] ? weekDates[i].split('/')[0] : '';
+                tr.appendChild(tdNgay);
+
+                // 4 Cột tiếp theo: Tên nhân sự tại 4 điểm y tế
+                for (let r = 0; r < 4; r++) {
+                    const tdName = document.createElement('td');
+                    tdName.style.padding = '8px';
+                    // scheduleGrid[r] là dữ liệu của Trạm r, lấy phần tử [i+1] (vì [0] là tên trạm)
+                    tdName.innerText = (scheduleGrid[r] && scheduleGrid[r][i+1]) ? scheduleGrid[r][i+1] : '';
+                    tr.appendChild(tdName);
+                }
+
+                tbody.appendChild(tr);
+            }
+
+            // 4. Chờ 300ms để DOM cập nhật mượt mà sau đó bật Hộp thoại In/Lưu PDF của trình duyệt
+            setTimeout(() => {
+                window.print();
+            }, 300);
         }
 
         // Khởi động app
