@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lịch Trực Google Sheets - Trạm Y Tế Xã</title>
+    <title>Lịch Trực Google Sheets - Trạm Y TẾ Xã Mộ Đức</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -69,7 +69,7 @@
                 <p class="text-sm text-gray-500 mt-1">Liên thông dữ liệu trực tiếp với Google Sheets</p>
             </div>
             <div class="flex flex-wrap gap-2 justify-end">
-                <button onclick="toggleSetupModal()" class="px-3 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition text-sm">
+                <button onclick="toggleSetupModal()" class="px-3 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition text-sm" title="Cấu hình Google Sheets API">
                     <i class="fa-solid fa-gear mr-1"></i> Thiết lập API
                 </button>
                 <button onclick="toggleExportModal()" class="px-3 py-2 bg-purple-50 text-purple-700 border border-purple-200 font-medium rounded-lg hover:bg-purple-100 transition shadow-sm text-sm">
@@ -150,8 +150,8 @@
                     </table>
                 </div>
                 <div class="bg-gray-50 p-3 text-xs text-gray-500 border-t flex justify-between">
-                    <span>* Dữ liệu hiện tại được lưu tạm trên trình duyệt. Hãy bấm "Lưu lên Sheets" để đồng bộ.</span>
-                    <span id="last-sync-time">Chưa đồng bộ</span>
+                    <span>* Dữ liệu tự động xoay tua hoặc đồng bộ từ Google Sheets khi đã kết nối.</span>
+                    <span id="last-sync-time">Chế độ tự động</span>
                 </div>
             </div>
         </div>
@@ -168,8 +168,8 @@
             <div class="p-5 overflow-y-auto">
                 <div class="mb-4">
                     <label class="block font-medium text-gray-700 mb-2">Đường link API (Web App URL):</label>
-                    <input type="text" id="api-url" placeholder="https://script.google.com/macros/s/AKfycby.../exec" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <p class="text-xs text-gray-500 mt-1">Dán đường link Apps Script của bạn vào đây để ứng dụng có thể đọc/ghi dữ liệu.</p>
+                    <input type="text" id="api-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">Dán đường link Apps Script thực tế của bạn vào đây (hoặc dán cứng vào hằng số `GOOGLE_SHEETS_API_URL` trong mã nguồn).</p>
                 </div>
             </div>
             
@@ -232,7 +232,7 @@
                         <input type="date" id="print-end-date" class="w-full border border-gray-300 rounded-md p-2 outline-none focus:border-red-500 bg-white text-sm">
                     </div>
                 </div>
-                <p class="text-xs text-gray-500 mt-3 italic">* Cỡ chữ sẽ được tự động co giãn để vừa vặn trên trang A4. Nếu chọn quá 31 ngày, bảng có thể bị tràn sang trang sau.</p>
+                <p class="text-xs text-gray-500 mt-3 italic">* Cỡ chữ sẽ được tự động co giãn để vừa vặn trên trang A4.</p>
             </div>
             
             <div class="p-4 border-t bg-gray-50 rounded-b-xl flex justify-end gap-2">
@@ -298,20 +298,32 @@
             <div style="line-height: 1.3;">
                 <div style="font-weight: bold; font-style: italic; margin-bottom: 4px; font-size: 13pt;">Nơi nhận:</div>
                 <div style="font-size: 12pt;">
-                    - Bí thư, chi ủy chi bộ (đ/b);<br>
-                    - GĐ, PGD TYT xã (b/c);<br>
+                    - Bí thư, chi ủy chi bộ (c/đ);<br>
+                    - GĐ, PGĐ TYT xã (b/c);<br>
                     - Các tổ, khoa, điểm y tế (t/h);<br>
                     - Lưu: Hc-Ts-Ns.
                 </div>
             </div>
-            <div style="text-align: center;">
-                <div id="print-footer-space" style="font-weight: bold; margin-bottom: 100px; font-size: 14pt;">GIÁM ĐỐC</div>
-                <div style="font-weight: bold; font-size: 14pt;">Phạm Minh Đức</div>
+            <div style="display: flex; gap: 40px; text-align: center;">
+                <div>
+                    <div style="font-weight: bold; margin-bottom: 100px; font-size: 14pt;">NGƯỜI LẬP</div>
+                    <div style="font-weight: bold; font-size: 14pt;">Bùi Đạt Hiếu</div>
+                </div>
+                <div>
+                    <div id="print-footer-space" style="font-weight: bold; margin-bottom: 100px; font-size: 14pt;">GIÁM ĐỐC</div>
+                    <div style="font-weight: bold; font-size: 14pt;">Phạm Minh Đức</div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
+        // =========================================================================
+        // 🔗 DÁN ĐƯỜNG LINK GOOGLE APPS SCRIPT WEB APP CỦA BẠN VÀO GIỮA DẤU NHÁY DƯỚI ĐÂY
+        // =========================================================================
+        const GOOGLE_SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbyetoo4Ds38b3hvq1QN7cifgkCImvUq_2tQodZW3Vxabay8x3mTUyJln06sPB6mcMcsxw/exec"; 
+        // =========================================================================
+
         // --- CẤU HÌNH DỮ LIỆU ---
         const DAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
         const ROLES = [
@@ -320,42 +332,91 @@
             'Điểm y tế số 2 (Đức Hòa)', 
             'Điểm y tế số 3 (Đức Phú)'
         ];
+
+        // Danh sách xoay tua chuẩn theo từng điểm y tế (Dựa theo tài liệu thực tế)
+        const ROSTERS = [
+            ['Bs Thuyên', 'Ys Tuệ', 'NHS Thuỳ', 'Ys Thủy', 'ĐD Vinh', 'BS Nguyện', 'NHS Thy'], // Điểm trạm chính (7 người)
+            ['ĐD Lài', 'ĐD Nguyệt', 'NHS Việt', 'BS Đức', 'NHS Tin'],                            // Điểm y tế số 1 (5 người)
+            ['Ys Phương', 'BS Phu', 'ĐD Thanh', 'NHS Thắm', 'ĐD Trúc'],                          // Điểm y tế số 2 (5 người)
+            ['NHS Lan', 'Ys Vũ', 'CN Thu', 'ĐD Ly Va', 'NHS Bé', 'NHS Trâm']                      // Điểm y tế số 3 (6 người)
+        ];
         
-        // Danh sách nhân sự đầy đủ
-        const STAFF = [
-            'BS Đức', 'BS Nguyện', 'BS Phu', 'Bs Thuyên',
-            'ĐD Vinh', 'ĐD Trúc', 'ĐD Lài', 'ĐD Thanh', 'ĐD Nguyệt', 'ĐD Ly Va',
-            'NHS Trâm', 'NHS Tin', 'NHS Lan', 'NHS Thy', 'NHS Việt', 'NHS Bé', 'NHS Thuỷ', 'NHS Thắm',
-            'Ys Phương', 'Ys Vũ', 'Ys Thủy', 'Ys Tuệ', 'CN Thu'
-        ];
+        // Danh sách tổng hợp 23 nhân sự
+        const STAFF = Array.from(new Set(ROSTERS.flat()));
 
-        // Dữ liệu template gốc
-        const DEFAULT_GRID = [
-            ['Điểm trạm chính (Đức Tân)', 'NHS Thy', 'Bs Thuyên', 'NHS Thuỷ', 'Ys Thủy', 'ĐD Vinh', 'BS Nguyện', 'NHS Thy'],
-            ['Điểm y tế số 1 (Mộ Đức)', 'ĐD Lài', 'NHS Việt', 'BS Đức', 'NHS Tin', 'ĐD Lài', 'NHS Việt', 'BS Đức'],
-            ['Điểm y tế số 2 (Đức Hòa)', 'BS Phu', 'ĐD Thanh', 'ĐD Trúc', 'Ys Phương', 'BS Phu', 'ĐD Thanh', 'NHS Thắm'],
-            ['Điểm y tế số 3 (Đức Phú)', 'Ys Vũ', 'NHS Bé', 'NHS Trâm', 'NHS Lan', 'Ys Vũ', 'NHS Bé', 'NHS Trâm']
-        ];
+        // Mốc thời gian chuẩn (16/08/2026 - Chủ nhật)
+        const ANCHOR_DATE_STR = '2026-08-16';
 
-        let scheduleGrid = JSON.parse(JSON.stringify(DEFAULT_GRID));
+        // Thuật toán tự động sinh bảng xoay tua trực theo ngày
+        function generateRotatedGrid(startOfWeekStr) {
+            const anchorDate = new Date(ANCHOR_DATE_STR);
+            const startOfWeek = new Date(startOfWeekStr);
+            
+            return ROLES.map((role, rIndex) => {
+                const row = [role];
+                const roster = ROSTERS[rIndex];
+                
+                for (let i = 0; i < 7; i++) {
+                    const currentD = new Date(startOfWeek);
+                    currentD.setDate(startOfWeek.getDate() + i);
+                    
+                    // Tính chênh lệch ngày so với ngày mốc
+                    const diffTime = currentD.getTime() - anchorDate.getTime();
+                    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    // Xoay tua tuần hoàn
+                    let rosterIdx = diffDays % roster.length;
+                    if (rosterIdx < 0) rosterIdx += roster.length;
+                    
+                    row.push(roster[rosterIdx]);
+                }
+                return row;
+            });
+        }
+
+        let scheduleGrid = generateRotatedGrid('2026-08-10');
         let highlightedCells = {};
         let weekStart = '';
         let weekEnd = '';
         let weekDates = [];
         let historyLogs = [];
 
-        function initApp() {
+        // Kiểm tra URL API an toàn (Tránh lỗi TypeError: Failed to fetch)
+        function getApiUrl(silent = false) {
+            let url = (typeof GOOGLE_SHEETS_API_URL !== 'undefined' && GOOGLE_SHEETS_API_URL) ? GOOGLE_SHEETS_API_URL.trim() : '';
+            
+            // Đọc thêm từ localStorage nếu trong code chưa dán link
+            if (!url || url.includes('AKfycby...')) {
+                const savedUrl = localStorage.getItem('lichTrucApiUrl');
+                if (savedUrl && savedUrl.trim() && !savedUrl.includes('AKfycby...')) {
+                    url = savedUrl.trim();
+                }
+            }
+
+            const isInvalid = !url || url.includes('AKfycby...') || !url.startsWith('https://');
+            
+            if (isInvalid) {
+                if (!silent) {
+                    alert("Vui lòng dán đường link Google Apps Script Web App thực tế của bạn vào mục 'Thiết lập API' hoặc khai báo trong biến GOOGLE_SHEETS_API_URL!");
+                    toggleSetupModal();
+                }
+                return null;
+            }
+            return url;
+        }
+
+        async function initApp() {
             const today = new Date();
             const first = today.getDate() - today.getDay() + 1;
             const monday = new Date(today.setDate(first));
-            updateWeekDates(monday.toISOString().split('T')[0]);
 
             renderStaffList();
             
+            // Cập nhật lại ngày tuần hiện tại
             const savedUrl = localStorage.getItem('lichTrucApiUrl');
-            if(savedUrl) {
-                document.getElementById('api-url').value = savedUrl;
-            }
+            if(savedUrl) document.getElementById('api-url').value = savedUrl;
+
+            await updateWeekDates(monday.toISOString().split('T')[0]);
         }
 
         async function updateWeekDates(dateString = null) {
@@ -383,6 +444,7 @@
             highlightedCells = {};
             renderTable();
             
+            // Tự động tải dữ liệu từ Google Sheets nếu URL đã sẵn sàng và hợp lệ
             if (getApiUrl(true)) {
                 await loadFromGoogleSheets(weekStart);
             }
@@ -545,17 +607,8 @@
             });
         }
 
-        function getApiUrl(silent = false) {
-            const url = document.getElementById('api-url').value.trim();
-            if(!url && !silent) {
-                alert("Vui lòng thiết lập Đường link API (Apps Script) trước!");
-                toggleSetupModal();
-            }
-            return url || null;
-        }
-
         async function saveToGoogleSheets() {
-            const url = getApiUrl();
+            const url = getApiUrl(false);
             if(!url) return;
 
             showLoading("Đang đẩy dữ liệu lên Google Sheets...");
@@ -585,15 +638,15 @@
                     alert("Có lỗi xảy ra từ phía Server: " + result.message);
                 }
             } catch(error) {
-                console.error("Lỗi POST:", error);
-                alert("Đã gửi lệnh lưu. Hãy kiểm tra file Google Sheets của bạn.");
+                console.warn("Lỗi POST Google Sheets:", error);
+                alert("Đã gửi lệnh lưu. Hãy kiểm tra lại kết nối mạng hoặc file Google Sheets của bạn.");
             } finally {
                 hideLoading();
             }
         }
 
         async function loadFromGoogleSheets(targetWeek = weekStart) {
-            const url = getApiUrl();
+            const url = getApiUrl(true);
             if(!url) return;
 
             showLoading("Đang tải dữ liệu tuần này từ Google Sheets...");
@@ -612,19 +665,23 @@
                     historyLogs = result.logs || [];
                     document.getElementById('last-sync-time').innerText = "Tải xuống lúc: " + new Date().toLocaleTimeString('vi-VN');
                 } else if (result.status === 'empty') {
-                    scheduleGrid = JSON.parse(JSON.stringify(DEFAULT_GRID));
+                    // Tự động xoay tua lịch trực cho tuần mới dựa trên thuật toán xoay vòng
+                    scheduleGrid = generateRotatedGrid(targetWeek);
                     historyLogs = [];
                     highlightedCells = {};
-                    document.getElementById('last-sync-time').innerText = "Tuần mới (Chưa lưu trên Sheets)";
+                    document.getElementById('last-sync-time').innerText = "Tuần mới (Tự động xoay tua)";
                 } else {
-                    alert("Có lỗi khi đọc dữ liệu: " + result.message);
+                    console.warn("Có lỗi khi đọc dữ liệu:", result.message);
                 }
                 
                 renderHistory();
                 renderTable();
             } catch (error) {
-                console.error("Lỗi GET:", error);
-                alert("Không thể đọc dữ liệu. Kiểm tra lại đường link API.");
+                console.warn("Không thể kết nối Google Sheets (Failed to fetch):", error);
+                scheduleGrid = generateRotatedGrid(targetWeek);
+                document.getElementById('last-sync-time').innerText = "Chế độ ngoại tuyến (Tự động xoay tua)";
+                renderHistory();
+                renderTable();
             } finally {
                 hideLoading();
             }
@@ -661,7 +718,7 @@
         }
 
         async function executeExportMonthly() {
-            const url = getApiUrl();
+            const url = getApiUrl(false);
             if(!url) return;
 
             const month = parseInt(document.getElementById('export-month').value);
@@ -685,7 +742,7 @@
                 }
             } catch (error) {
                 console.error("Lỗi Export:", error);
-                alert("Lỗi kết nối khi tải dữ liệu tháng.");
+                alert("Lỗi kết nối khi tải dữ liệu tháng. Vui lòng kiểm tra lại URL Apps Script.");
             } finally {
                 hideLoading();
             }
@@ -842,8 +899,7 @@
                             });
                         }
                     } catch (error) {
-                        console.error("Lỗi lấy dữ liệu in:", error);
-                        alert("Không thể tải thêm dữ liệu từ Google Sheets.");
+                        console.warn("Lỗi lấy dữ liệu in:", error);
                     } finally {
                         hideLoading();
                     }
