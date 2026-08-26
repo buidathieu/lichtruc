@@ -3,12 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lịch Trực Google Sheets</title>
+    <title>Lịch Trực Google Sheets - Trạm Y Tế Xã</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Thêm thư viện SheetJS để xuất file Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -33,16 +30,16 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Khung in PDF - Tích hợp cấu trúc LaTeX */
+        /* Khung in PDF - Tích hợp cấu trúc hành chính */
         @media print {
             body { background-color: white; margin: 0; padding: 0; }
-            #app-container, #setup-modal, #export-modal, #loading-overlay { display: none !important; }
+            #app-container, #setup-modal, #export-modal, #print-modal, #loading-overlay { display: none !important; }
             #print-container { display: block !important; }
             @page { size: A4 portrait; margin: 15mm; }
         }
         #print-container { display: none; font-family: 'Times New Roman', Times, serif; color: black; }
         
-        /* CSS bổ sung viền đậm nét cho bảng in */
+        /* CSS viền nét cho bảng in */
         #print-container table, #print-container th, #print-container td {
             border: 1px solid black !important;
             border-collapse: collapse !important;
@@ -62,7 +59,7 @@
         <p class="text-blue-600 font-semibold text-lg" id="loading-text">Đang đồng bộ dữ liệu...</p>
     </div>
 
-    <!-- MAIN APP CONTAINER (Sẽ bị ẩn đi khi bấm In) -->
+    <!-- MAIN APP CONTAINER -->
     <div id="app-container" class="max-w-7xl mx-auto p-4 md:p-8">
         
         <!-- Header -->
@@ -99,7 +96,7 @@
                     <h2 class="font-bold text-gray-700 mb-3 border-b pb-2"><i class="fa-solid fa-user-doctor mr-2"></i>Nhân sự</h2>
                     <p class="text-xs text-gray-500 mb-4">Kéo thả tên nhân sự vào bảng lịch trực bên phải.</p>
                     
-                    <div class="space-y-2" id="staff-list">
+                    <div class="space-y-2 max-h-[400px] overflow-y-auto pr-1" id="staff-list">
                         <!-- Sẽ được render bằng JS -->
                     </div>
                 </div>
@@ -174,135 +171,6 @@
                     <input type="text" id="api-url" placeholder="https://script.google.com/macros/s/AKfycby.../exec" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <p class="text-xs text-gray-500 mt-1">Dán đường link Apps Script của bạn vào đây để ứng dụng có thể đọc/ghi dữ liệu.</p>
                 </div>
-
-                <div class="border-t pt-4">
-                    <h4 class="font-bold text-gray-800 mb-2">Hướng dẫn tạo API (3 phút):</h4>
-                    <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700 mb-4">
-                        <li>Tạo một file <strong>Google Sheets</strong> mới.</li>
-                        <li>Chọn menu <strong>Tiện ích mở rộng</strong> > <strong>Apps Script</strong>.</li>
-                        <li>Xóa code cũ, dán đoạn code dưới đây vào và lưu lại.</li>
-                        <li>Bấm <strong>Triển khai (Deploy)</strong> > <strong>Triển khai mới</strong>.</li>
-                        <li>Chọn <strong>Ứng dụng Web</strong>. Quyền truy cập: <strong>Bất kỳ ai</strong>.</li>
-                        <li>Copy URL được cấp và dán vào ô bên trên.</li>
-                    </ol>
-
-                    <div class="relative">
-                        <button onclick="copyScriptCode()" class="absolute right-2 top-2 bg-gray-700 text-white text-xs px-2 py-1 rounded hover:bg-gray-800">Copy Code</button>
-                        <textarea id="script-code" readonly class="w-full h-48 p-3 bg-gray-900 text-green-400 font-mono text-xs rounded-lg outline-none" style="resize: none;">
-function doPost(e) {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var request = JSON.parse(e.postData.contents);
-    var action = request.action;
-
-    if (action === "save") {
-      var data = request.data;
-      var weekStart = data.weekStart; // VD: 2026-08-10
-      if (!weekStart) throw new Error("Thiếu ngày bắt đầu tuần.");
-
-      // Tạo tên Sheet theo tuần (VD: Tuần 10-08-2026)
-      var parts = weekStart.split('-');
-      var sheetName = "Tuần " + parts[2] + "-" + parts[1] + "-" + parts[0];
-
-      // Tìm Sheet, nếu chưa có thì tự động tạo Tab mới
-      var sheet = ss.getSheetByName(sheetName);
-      if (!sheet) {
-        sheet = ss.insertSheet(sheetName);
-      }
-
-      // Xóa vùng dữ liệu cũ của tuần này để cập nhật
-      sheet.getRange("A1:K100").clearContent();
-
-      // 1. Ghi Tiêu đề & Thông tin Tuần
-      sheet.getRange("A1").setValue("Lịch Trực Tuần").setFontWeight("bold").setFontSize(12);
-      sheet.getRange("B1").setValue("'" + data.weekStart);
-      sheet.getRange("C1").setValue("đến");
-      sheet.getRange("D1").setValue("'" + data.weekEnd);
-      sheet.getRange("A2").setValue("Cập nhật cuối: " + new Date().toLocaleString());
-      
-      // 2. Ghi tiêu đề bảng (dòng 4)
-      if(data.days) {
-        var headerRow = ["Vị trí"].concat(data.days);
-        sheet.getRange(4, 1, 1, headerRow.length).setValues([headerRow]).setFontWeight("bold").setBackground("#f3f4f6");
-      }
-
-      // 3. Ghi dữ liệu bảng lưới (từ dòng 5)
-      if (data.grid && data.grid.length > 0) {
-        sheet.getRange(5, 1, data.grid.length, data.grid[0].length).setValues(data.grid);
-      }
-      
-      // 4. Ghi lịch sử đổi ca (Cột J, từ dòng 4)
-      sheet.getRange("J4").setValue("Lịch sử thay đổi").setFontWeight("bold").setBackground("#fef3c7");
-      if (data.logs && data.logs.length > 0) {
-        var logRows = data.logs.map(function(l) { return [l]; });
-        sheet.getRange(5, 10, logRows.length, 1).setValues(logRows);
-      }
-      
-      return ContentService.createTextOutput(JSON.stringify({"status": "success", "sheet": sheetName}))
-        .setMimeType(ContentService.MimeType.JSON);
-        
-    } else if (action === "load") {
-      var weekStart = request.weekStart;
-      var parts = weekStart.split('-');
-      var sheetName = "Tuần " + parts[2] + "-" + parts[1] + "-" + parts[0];
-      
-      var sheet = ss.getSheetByName(sheetName);
-      if (!sheet) {
-        return ContentService.createTextOutput(JSON.stringify({"status": "empty"}))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-      
-      // Đọc thông tin
-      var wStart = sheet.getRange("B1").getValue();
-      var wEnd = sheet.getRange("D1").getValue();
-      var gridData = sheet.getRange(5, 1, 5, 8).getValues();
-      
-      // Đọc lịch sử
-      var logData = [];
-      var lastRow = sheet.getLastRow();
-      if(lastRow >= 5) {
-          var rawLogs = sheet.getRange(5, 10, lastRow - 4, 1).getValues();
-          logData = rawLogs.map(function(r){ return r[0]; }).filter(function(l){ return l !== ""; });
-      }
-      
-      return ContentService.createTextOutput(JSON.stringify({
-        "status": "success", 
-        "grid": gridData,
-        "weekStart": wStart,
-        "weekEnd": wEnd,
-        "logs": logData
-      })).setMimeType(ContentService.MimeType.JSON);
-
-    } else if (action === "exportMonth") {
-      // Tính năng tổng hợp lịch tháng
-      var allSheets = ss.getSheets();
-      var allData = [];
-
-      for (var i = 0; i < allSheets.length; i++) {
-        var sh = allSheets[i];
-        if (sh.getName().indexOf("Tuần") === 0) {
-          var wStartVal = sh.getRange("B1").getValue();
-          if (wStartVal) {
-             var dateStr = wStartVal.toString().replace("'", "");
-             var grid = sh.getRange(5, 1, 5, 8).getValues();
-             allData.push({ weekStart: dateStr, grid: grid });
-          }
-        }
-      }
-      
-      return ContentService.createTextOutput(JSON.stringify({
-        "status": "success",
-        "data": allData
-      })).setMimeType(ContentService.MimeType.JSON);
-    }
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": error.message}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-                        </textarea>
-                    </div>
-                </div>
             </div>
             
             <div class="p-4 border-t bg-gray-50 rounded-b-xl flex justify-end">
@@ -326,7 +194,7 @@ function doPost(e) {
                 <div class="flex gap-4">
                     <div class="w-1/2">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Tháng</label>
-                        <input type="number" id="export-month" min="1" max="12" value="7" class="w-full border border-gray-300 rounded-md p-2 outline-none focus:border-purple-500">
+                        <input type="number" id="export-month" min="1" max="12" value="8" class="w-full border border-gray-300 rounded-md p-2 outline-none focus:border-purple-500">
                     </div>
                     <div class="w-1/2">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Năm</label>
@@ -344,7 +212,7 @@ function doPost(e) {
         </div>
     </div>
 
-    <!-- MODAL IN LỊCH TRỰC -->
+    <!-- MODAL IN LỊCH TRỰC (TỪ NGÀY -> ĐẾN NGÀY) -->
     <div id="print-modal" class="fixed inset-0 bg-black/50 z-40 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col">
             <div class="p-4 border-b flex justify-between items-center bg-red-50 rounded-t-xl">
@@ -353,32 +221,18 @@ function doPost(e) {
             </div>
             
             <div class="p-5">
-                <p class="text-sm text-gray-600 mb-4">Bạn muốn tạo bản in cho khoảng thời gian nào?</p>
-                <div class="space-y-3">
-                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition border-red-200 bg-red-50/30">
-                        <input type="radio" name="print-range" value="1week" checked class="w-4 h-4 text-red-600 focus:ring-red-500">
-                        <span class="font-medium text-gray-800">1 Tuần (Tuần đang hiển thị)</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                        <input type="radio" name="print-range" value="2weeks" class="w-4 h-4 text-red-600 focus:ring-red-500">
-                        <span class="font-medium text-gray-800">2 Tuần (Tuần hiện tại & Tuần sau)</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                        <input type="radio" name="print-range" value="month" class="w-4 h-4 text-red-600 focus:ring-red-500">
-                        <span class="font-medium text-gray-800">Cả tháng</span>
-                    </label>
-                </div>
-                
-                <div id="print-month-selector" class="mt-4 hidden flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p class="text-sm text-gray-600 mb-4">Vui lòng chọn khoảng thời gian cần in lịch trực:</p>
+                <div class="flex gap-4 p-4 bg-red-50/50 rounded-lg border border-red-100">
                     <div class="w-1/2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Tháng</label>
-                        <input type="number" id="print-month" min="1" max="12" class="w-full border border-gray-300 rounded-md p-2 outline-none focus:border-red-500">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Từ ngày</label>
+                        <input type="date" id="print-start-date" class="w-full border border-gray-300 rounded-md p-2 outline-none focus:border-red-500 bg-white text-sm">
                     </div>
                     <div class="w-1/2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Năm</label>
-                        <input type="number" id="print-year" min="2020" max="2030" class="w-full border border-gray-300 rounded-md p-2 outline-none focus:border-red-500">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Đến ngày</label>
+                        <input type="date" id="print-end-date" class="w-full border border-gray-300 rounded-md p-2 outline-none focus:border-red-500 bg-white text-sm">
                     </div>
                 </div>
+                <p class="text-xs text-gray-500 mt-3 italic">* Cỡ chữ sẽ được tự động co giãn để vừa vặn trên trang A4. Nếu chọn quá 31 ngày, bảng có thể bị tràn sang trang sau.</p>
             </div>
             
             <div class="p-4 border-t bg-gray-50 rounded-b-xl flex justify-end gap-2">
@@ -397,7 +251,7 @@ function doPost(e) {
         <div id="print-header" style="display: flex; justify-content: space-between; margin-bottom: 20px;">
             <div style="text-align: center; line-height: 1.2;">
                 <div style="font-size: 13pt;">UBND XÃ MỘ ĐỨC</div>
-                <div style="font-weight: bold; font-size: 13pt;">TRẠM Y TẾ</div>
+                <div style="font-weight: bold; font-size: 13pt;">TRẠM Y TẾ XÃ</div>
                 <div style="border-top: 1px solid black; width: 40%; margin: 4px auto;"></div>
                 <div style="font-size: 13pt; margin-top: 5px;">Số: ....../LT-TYT</div>
             </div>
@@ -467,7 +321,7 @@ function doPost(e) {
             'Điểm y tế số 3 (Đức Phú)'
         ];
         
-        // Danh sách nhân sự được tổng hợp từ lịch phân công
+        // Danh sách nhân sự đầy đủ
         const STAFF = [
             'BS Đức', 'BS Nguyện', 'BS Phu', 'Bs Thuyên',
             'ĐD Vinh', 'ĐD Trúc', 'ĐD Lài', 'ĐD Thanh', 'ĐD Nguyệt', 'ĐD Ly Va',
@@ -475,7 +329,7 @@ function doPost(e) {
             'Ys Phương', 'Ys Vũ', 'Ys Thủy', 'Ys Tuệ', 'CN Thu'
         ];
 
-        // Dữ liệu template gốc để reset khi sang tuần mới chưa có dữ liệu (Lấy mẫu tuần 03/08 - 09/08/2026)
+        // Dữ liệu template gốc
         const DEFAULT_GRID = [
             ['Điểm trạm chính (Đức Tân)', 'NHS Thy', 'Bs Thuyên', 'NHS Thuỷ', 'Ys Thủy', 'ĐD Vinh', 'BS Nguyện', 'NHS Thy'],
             ['Điểm y tế số 1 (Mộ Đức)', 'ĐD Lài', 'NHS Việt', 'BS Đức', 'NHS Tin', 'ĐD Lài', 'NHS Việt', 'BS Đức'],
@@ -483,35 +337,27 @@ function doPost(e) {
             ['Điểm y tế số 3 (Đức Phú)', 'Ys Vũ', 'NHS Bé', 'NHS Trâm', 'NHS Lan', 'Ys Vũ', 'NHS Bé', 'NHS Trâm']
         ];
 
-        // Dữ liệu khởi tạo
         let scheduleGrid = JSON.parse(JSON.stringify(DEFAULT_GRID));
-
-        let highlightedCells = {}; // Lưu trữ các ô vừa bị thay đổi
-
-        // State mới cho Tuần trực và Lịch sử
+        let highlightedCells = {};
         let weekStart = '';
         let weekEnd = '';
-        let weekDates = []; // Lưu các ngày tương ứng [10/08, 11/08...]
+        let weekDates = [];
         let historyLogs = [];
 
-        // --- KHỞI TẠO GIAO DIỆN ---
         function initApp() {
-            // Set tuần mặc định là tuần hiện tại
             const today = new Date();
-            const first = today.getDate() - today.getDay() + 1; // Tìm ngày Thứ 2
+            const first = today.getDate() - today.getDay() + 1;
             const monday = new Date(today.setDate(first));
             updateWeekDates(monday.toISOString().split('T')[0]);
 
             renderStaffList();
             
-            // Lấy URL API từ LocalStorage nếu đã lưu trước đó
             const savedUrl = localStorage.getItem('lichTrucApiUrl');
             if(savedUrl) {
                 document.getElementById('api-url').value = savedUrl;
             }
         }
 
-        // Tính toán chuỗi ngày trong tuần
         async function updateWeekDates(dateString = null) {
             const inputStart = document.getElementById('week-start');
             if (dateString) {
@@ -534,41 +380,32 @@ function doPost(e) {
             weekEnd = end.toISOString().split('T')[0];
             document.getElementById('week-end').value = weekEnd;
 
-            // Xóa highlight khi chuyển tuần
             highlightedCells = {};
             renderTable();
             
-            // Tự động tải dữ liệu của tuần mới từ Sheets (nếu đã kết nối API)
             if (getApiUrl(true)) {
                 await loadFromGoogleSheets(weekStart);
             }
         }
 
-        // Chuyển đổi tuần trước / tuần sau
         function changeWeek(offset) {
             const inputStart = document.getElementById('week-start');
             if (!inputStart.value) return;
 
             const currentStart = new Date(inputStart.value);
-            // Cộng hoặc trừ số ngày (offset * 7 ngày)
             currentStart.setDate(currentStart.getDate() + (offset * 7));
-            
-            // Lấy chuỗi định dạng YYYY-MM-DD có tính đến múi giờ địa phương
             currentStart.setMinutes(currentStart.getMinutes() - currentStart.getTimezoneOffset());
             const newDateString = currentStart.toISOString().split('T')[0];
             
-            // Gọi hàm cập nhật tuần
             updateWeekDates(newDateString);
         }
 
-        // Thêm log vào lịch sử
         function addLog(message) {
-            historyLogs.unshift(message); // Thêm lên đầu
-            if(historyLogs.length > 20) historyLogs.pop(); // Giữ tối đa 20 dòng
+            historyLogs.unshift(message);
+            if(historyLogs.length > 20) historyLogs.pop();
             renderHistory();
         }
 
-        // Render danh sách Lịch sử
         function renderHistory() {
             const container = document.getElementById('history-list');
             if(historyLogs.length === 0) {
@@ -597,7 +434,6 @@ function doPost(e) {
                 div.draggable = true;
                 div.innerHTML = `<i class="fa-solid fa-grip-vertical text-gray-400 mr-2"></i> ${name}`;
                 
-                // Sự kiện bắt đầu kéo
                 div.addEventListener('dragstart', function(e) {
                     e.dataTransfer.setData('text/plain', name);
                     e.target.style.opacity = '0.5';
@@ -611,7 +447,6 @@ function doPost(e) {
         }
 
         function renderTable() {
-            // Render Header
             const headerRow = document.getElementById('table-header');
             headerRow.innerHTML = `<th class="border-b-2 border-gray-300 p-3 bg-gray-100 text-gray-700 font-bold w-40">Vị trí</th>`;
             DAYS.forEach((day, index) => {
@@ -619,7 +454,6 @@ function doPost(e) {
                 headerRow.innerHTML += `<th class="border-b-2 border-gray-300 p-3 bg-gray-100 text-center text-gray-700 font-bold min-w-[100px]">${day} ${dateHtml}</th>`;
             });
 
-            // Render Body
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
 
@@ -627,13 +461,11 @@ function doPost(e) {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-gray-50 border-b border-gray-200 transition-colors";
                 
-                // Cột Vị trí (Không cho drop)
                 const tdRole = document.createElement('td');
                 tdRole.className = "p-3 font-semibold text-gray-800 bg-white shadow-[1px_0_0_0_#e5e7eb] relative z-10";
                 tdRole.innerText = row[0];
                 tr.appendChild(tdRole);
 
-                // Các cột Ngày (Cho phép drop)
                 for(let colIndex = 1; colIndex <= DAYS.length; colIndex++) {
                     const td = document.createElement('td');
                     td.className = "p-2 text-center relative";
@@ -641,14 +473,12 @@ function doPost(e) {
                     const cellKey = `${rowIndex}-${colIndex}`;
                     const isHighlighted = highlightedCells[cellKey];
 
-                    // Nội dung ô (Có thể kéo đi chỗ khác)
                     const contentDiv = document.createElement('div');
                     contentDiv.className = `p-2 rounded border-2 transition-all cursor-grab active:cursor-grabbing
                         ${isHighlighted ? 'bg-blue-50 border-blue-400 text-blue-700 font-bold' : 'bg-white border-transparent hover:border-gray-300 text-gray-700'}`;
                     contentDiv.draggable = true;
                     contentDiv.innerText = row[colIndex] || '-';
 
-                    // Sự kiện kéo từ trong bảng ra
                     contentDiv.addEventListener('dragstart', function(e) {
                         e.dataTransfer.setData('text/plain', JSON.stringify({
                             source: 'table',
@@ -662,9 +492,8 @@ function doPost(e) {
                         contentDiv.classList.remove('opacity-50');
                     });
 
-                    // Sự kiện thả (Drop) vào ô này
                     td.addEventListener('dragover', function(e) {
-                        e.preventDefault(); // Cần thiết để cho phép drop
+                        e.preventDefault();
                         contentDiv.classList.add('border-green-400', 'bg-green-50');
                     });
                     td.addEventListener('dragleave', function(e) {
@@ -679,28 +508,22 @@ function doPost(e) {
                         const timeStr = new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
                         
                         try {
-                            // Nếu kéo từ trong bảng (Swap/Đổi chỗ)
                             const dragData = JSON.parse(dragDataRaw);
                             if(dragData.source === 'table') {
-                                // Lấy tên người ở ô hiện tại
                                 const targetName = scheduleGrid[rowIndex][colIndex];
-                                if(dragData.r === rowIndex && dragData.c === colIndex) return; // Nếu thả tại chỗ thì bỏ qua
+                                if(dragData.r === rowIndex && dragData.c === colIndex) return;
                                 
-                                // Đổi chỗ
                                 scheduleGrid[rowIndex][colIndex] = dragData.name;
                                 scheduleGrid[dragData.r][dragData.c] = targetName;
                                 
-                                // Đánh dấu 2 ô vừa đổi
                                 highlightedCells[`${rowIndex}-${colIndex}`] = true;
                                 highlightedCells[`${dragData.r}-${dragData.c}`] = true;
 
-                                // Lưu lịch sử
                                 const date1 = weekDates[dragData.c-1] ? ` (${weekDates[dragData.c-1]})` : '';
                                 const date2 = weekDates[colIndex-1] ? ` (${weekDates[colIndex-1]})` : '';
                                 addLog(`[${timeStr}] Đổi ca: <b>${dragData.name}</b>${date1} ↔ <b>${targetName}</b>${date2}`);
                             }
                         } catch(err) {
-                            // Nếu kéo từ danh sách bên ngoài (Chỉ là text)
                             const newName = dragDataRaw;
                             const oldName = scheduleGrid[rowIndex][colIndex];
                             if(newName && STAFF.includes(newName)) {
@@ -721,8 +544,6 @@ function doPost(e) {
                 tbody.appendChild(tr);
             });
         }
-
-        // --- KẾT NỐI GOOGLE SHEETS API ---
 
         function getApiUrl(silent = false) {
             const url = document.getElementById('api-url').value.trim();
@@ -748,7 +569,6 @@ function doPost(e) {
             };
 
             try {
-                // Đã chuyển thành chuẩn gửi POST dạng "action: save"
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -759,14 +579,14 @@ function doPost(e) {
                 if(result.status === 'success') {
                     alert(`Đã lưu thành công!\nDữ liệu được đẩy vào Tab: "${result.sheet}" trên Google Sheets.`);
                     document.getElementById('last-sync-time').innerText = "Cập nhật cuối: " + new Date().toLocaleTimeString('vi-VN');
-                    highlightedCells = {}; // Xóa highlight sau khi lưu thành công
+                    highlightedCells = {};
                     renderTable();
                 } else {
                     alert("Có lỗi xảy ra từ phía Server: " + result.message);
                 }
             } catch(error) {
                 console.error("Lỗi POST:", error);
-                alert("Đã gửi lệnh lưu. Hãy kiểm tra file Google Sheets của bạn. (Lưu ý: Nếu gặp lỗi CORS, hãy đảm bảo bạn đã Deploy Web App dưới dạng 'Anyone').");
+                alert("Đã gửi lệnh lưu. Hãy kiểm tra file Google Sheets của bạn.");
             } finally {
                 hideLoading();
             }
@@ -779,7 +599,6 @@ function doPost(e) {
             showLoading("Đang tải dữ liệu tuần này từ Google Sheets...");
 
             try {
-                // Đã chuyển thành gửi POST với "action: load" kèm theo thông tin Tuần
                 const response = await fetch(url, { 
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -789,14 +608,10 @@ function doPost(e) {
                 
                 if(result.status === 'success' && result.grid && result.grid.length > 0) {
                     scheduleGrid = result.grid;
-                    highlightedCells = {}; // Xóa highlight
-                    
-                    // Nạp lịch sử
+                    highlightedCells = {};
                     historyLogs = result.logs || [];
-                    
                     document.getElementById('last-sync-time').innerText = "Tải xuống lúc: " + new Date().toLocaleTimeString('vi-VN');
                 } else if (result.status === 'empty') {
-                    // Nếu tuần này chưa có trên Sheets -> Reset về bảng mặc định
                     scheduleGrid = JSON.parse(JSON.stringify(DEFAULT_GRID));
                     historyLogs = [];
                     highlightedCells = {};
@@ -809,31 +624,21 @@ function doPost(e) {
                 renderTable();
             } catch (error) {
                 console.error("Lỗi GET:", error);
-                alert("Không thể đọc dữ liệu. Kiểm tra lại đường link API hoặc quyền truy cập của Web App.");
+                alert("Không thể đọc dữ liệu. Kiểm tra lại đường link API.");
             } finally {
                 hideLoading();
             }
         }
 
-        // --- CÁC HÀM TIỆN ÍCH ---
         function toggleSetupModal() {
-            const modal = document.getElementById('setup-modal');
-            modal.classList.toggle('hidden');
+            document.getElementById('setup-modal').classList.toggle('hidden');
         }
 
         function saveApiUrl() {
             const url = document.getElementById('api-url').value.trim();
             localStorage.setItem('lichTrucApiUrl', url);
             toggleSetupModal();
-            // Optional: Auto load sau khi lưu link
             if(url) loadFromGoogleSheets();
-        }
-
-        function copyScriptCode() {
-            const code = document.getElementById('script-code');
-            code.select();
-            document.execCommand('copy');
-            alert("Đã copy mã nguồn Apps Script!");
         }
 
         function showLoading(text) {
@@ -848,8 +653,6 @@ function doPost(e) {
         function toggleExportModal() {
             const modal = document.getElementById('export-modal');
             modal.classList.toggle('hidden');
-            
-            // Tự động điền tháng hiện tại khi mở form
             if (!modal.classList.contains('hidden')) {
                 const today = new Date();
                 document.getElementById('export-month').value = today.getMonth() + 1;
@@ -889,37 +692,29 @@ function doPost(e) {
         }
 
         function processAndDownloadExcel(allWeeksData, targetMonth, targetYear) {
-            // 1. Xác định số ngày trong tháng
             const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
-            
-            // 2. Tạo Dòng Tiêu đề (Vị trí, 1, 2, 3... đến ngày cuối tháng)
             const headerRow = ['Vị trí / Vai trò'];
             for(let d = 1; d <= daysInMonth; d++) {
                 headerRow.push(d);
             }
             
-            // 3. Khởi tạo Ma trận dữ liệu rỗng (Bản đồ lưới lịch tháng)
             const dataRows = ROLES.map(role => {
                 const row = new Array(daysInMonth + 1).fill('');
-                row[0] = role; // Cột đầu tiên là tên Vai trò (Trực lãnh đạo, Cấp cứu...)
+                row[0] = role;
                 return row;
             });
 
-            // 4. Lấp đầy dữ liệu từ các Tuần vào đúng ô của Tháng
             allWeeksData.forEach(week => {
                 const wStart = new Date(week.weekStart);
                 if (isNaN(wStart.getTime())) return; 
 
-                // Duyệt qua 7 ngày trong tuần đó
                 for (let i = 0; i < 7; i++) {
                     const currentDate = new Date(wStart);
                     currentDate.setDate(wStart.getDate() + i);
 
-                    // Chỉ nhặt những ngày trùng với Tháng/Năm đang cần xuất
                     if (currentDate.getMonth() + 1 === targetMonth && currentDate.getFullYear() === targetYear) {
-                        const dayOfMonth = currentDate.getDate(); // Lấy ra ngày 1, 2, 3...
+                        const dayOfMonth = currentDate.getDate();
 
-                        // Nhét tên bác sĩ vào đúng dòng (Vai trò) và cột (Ngày)
                         for (let r = 0; r < ROLES.length; r++) {
                             if (week.grid[r] && week.grid[r][i + 1]) {
                                 dataRows[r][dayOfMonth] = week.grid[r][i + 1];
@@ -930,51 +725,29 @@ function doPost(e) {
             });
 
             const wsData = [headerRow, ...dataRows];
-
-            // 5. Sử dụng SheetJS tạo file Excel
             const ws = XLSX.utils.aoa_to_sheet(wsData);
             
-            // Chỉnh độ rộng cột cho đẹp
-            const wscols = [{wch: 18}]; // Cột đầu (Tên vị trí) rộng hơn
+            const wscols = [{wch: 18}];
             for(let i = 0; i < daysInMonth; i++) wscols.push({wch: 10});
             ws['!cols'] = wscols;
 
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, `Tháng ${targetMonth}`);
-            
-            // 6. Xuất và tự động tải file (Đặt tên giống yêu cầu: TRỰC T7.xls)
             XLSX.writeFile(wb, `TRỰC T${targetMonth}.xls`);
         }
 
-        // --- HÀM XUẤT PDF (IN TRÌNH KÝ CHUẨN FORM VĂN BẢN) ---
         function togglePrintModal() {
             const modal = document.getElementById('print-modal');
             modal.classList.toggle('hidden');
             
             if (!modal.classList.contains('hidden')) {
-                const today = new Date();
-                document.getElementById('print-month').value = today.getMonth() + 1;
-                document.getElementById('print-year').value = today.getFullYear();
-
-                // Lắng nghe sự kiện để hiện/ẩn bộ chọn Tháng
-                const radios = document.querySelectorAll('input[name="print-range"]');
-                radios.forEach(r => r.addEventListener('change', function() {
-                    // Cập nhật viền cho ô được chọn
-                    document.querySelectorAll('input[name="print-range"]').forEach(input => {
-                        input.parentElement.classList.remove('border-red-200', 'bg-red-50/30');
-                    });
-                    this.parentElement.classList.add('border-red-200', 'bg-red-50/30');
-
-                    if(this.value === 'month') {
-                        document.getElementById('print-month-selector').classList.remove('hidden');
-                    } else {
-                        document.getElementById('print-month-selector').classList.add('hidden');
-                    }
-                }));
+                if(weekStart && weekEnd) {
+                    document.getElementById('print-start-date').value = weekStart;
+                    document.getElementById('print-end-date').value = weekEnd;
+                }
             }
         }
 
-        // Tiện ích lấy đúng định dạng YYYY-MM-DD không bị lỗi múi giờ
         function getLocalISODate(d) {
             const localD = new Date(d);
             localD.setMinutes(localD.getMinutes() - localD.getTimezoneOffset());
@@ -982,35 +755,66 @@ function doPost(e) {
         }
 
         async function executePrint() {
-            if (!weekStart) {
-                alert("Vui lòng đợi tải xong dữ liệu tuần trước khi in.");
+            const printStartVal = document.getElementById('print-start-date').value;
+            const printEndVal = document.getElementById('print-end-date').value;
+
+            if (!printStartVal || !printEndVal) {
+                alert("Vui lòng chọn đầy đủ Từ ngày và Đến ngày.");
                 return;
             }
 
-            const option = document.querySelector('input[name="print-range"]:checked').value;
-            togglePrintModal();
+            const pStart = new Date(printStartVal);
+            const pEnd = new Date(printEndVal);
 
-            const dateMap = {}; // Lưu trữ dữ liệu: key là 'YYYY-MM-DD', value là mảng tên
-            
-            // 1. Luôn ưu tiên đưa dữ liệu của màn hình hiện tại vào Map trước
-            const startD = new Date(weekStart);
-            for(let i=0; i<7; i++) {
-                const d = new Date(startD);
-                d.setDate(startD.getDate() + i);
-                const dateStr = getLocalISODate(d);
-                dateMap[dateStr] = [
-                    scheduleGrid[0] ? scheduleGrid[0][i+1] : '',
-                    scheduleGrid[1] ? scheduleGrid[1][i+1] : '',
-                    scheduleGrid[2] ? scheduleGrid[2][i+1] : '',
-                    scheduleGrid[3] ? scheduleGrid[3][i+1] : ''
-                ];
+            if (pStart > pEnd) {
+                alert("Ngày bắt đầu không được lớn hơn ngày kết thúc.");
+                return;
             }
 
-            // 2. Nếu in > 1 tuần, kéo dữ liệu từ Google Sheets về bổ sung
-            if (option === '2weeks' || option === 'month') {
+            const diffTime = Math.abs(pEnd - pStart);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+            if (diffDays > 31) {
+                if(!confirm("Bạn đang chọn khoảng thời gian lớn hơn 1 tháng. Chữ in ra sẽ rất nhỏ, bạn có chắc chắn muốn tiếp tục?")) return;
+            }
+
+            togglePrintModal();
+
+            const dateMap = {}; 
+            
+            if(weekStart) {
+                const startD = new Date(weekStart);
+                for(let i=0; i<7; i++) {
+                    const d = new Date(startD);
+                    d.setDate(startD.getDate() + i);
+                    const dateStr = getLocalISODate(d);
+                    dateMap[dateStr] = [
+                        scheduleGrid[0] ? scheduleGrid[0][i+1] : '',
+                        scheduleGrid[1] ? scheduleGrid[1][i+1] : '',
+                        scheduleGrid[2] ? scheduleGrid[2][i+1] : '',
+                        scheduleGrid[3] ? scheduleGrid[3][i+1] : ''
+                    ];
+                }
+            }
+
+            const datesToPrint = [];
+            let isMissingData = false;
+
+            for(let i = 0; i < diffDays; i++) {
+                const d = new Date(pStart);
+                d.setDate(pStart.getDate() + i);
+                datesToPrint.push(d);
+                
+                const dateStr = getLocalISODate(d);
+                if (!dateMap[dateStr]) {
+                    isMissingData = true;
+                }
+            }
+
+            if (isMissingData) {
                 const url = getApiUrl(true);
                 if (url) {
-                    showLoading("Đang thu thập dữ liệu các tuần để tạo bản in...");
+                    showLoading("Khoảng thời gian chứa dữ liệu ngoài tuần hiện tại. Đang tải thêm từ Google Sheets...");
                     try {
                         const response = await fetch(url, { 
                             method: 'POST',
@@ -1026,7 +830,6 @@ function doPost(e) {
                                     const d = new Date(wS);
                                     d.setDate(wS.getDate() + i);
                                     const dateStr = getLocalISODate(d);
-                                    // Bổ sung vào map (Không đè lên dữ liệu tuần hiện tại đang sửa)
                                     if (!dateMap[dateStr]) {
                                         dateMap[dateStr] = [
                                             week.grid[0] ? week.grid[0][i+1] : '',
@@ -1040,42 +843,20 @@ function doPost(e) {
                         }
                     } catch (error) {
                         console.error("Lỗi lấy dữ liệu in:", error);
-                        alert("Không thể tải thêm dữ liệu tuần khác. Chỉ in dữ liệu tuần hiện tại.");
+                        alert("Không thể tải thêm dữ liệu từ Google Sheets.");
                     } finally {
                         hideLoading();
                     }
                 }
             }
 
-            // 3. Xác định chuỗi ngày cần in
-            const datesToPrint = [];
-            let subtitleStr = "";
             const formatDateVn = (dObj) => `${dObj.getDate().toString().padStart(2, '0')}/${(dObj.getMonth()+1).toString().padStart(2, '0')}/${dObj.getFullYear()}`;
-
-            if (option === '1week') {
-                for(let i=0; i<7; i++) datesToPrint.push(new Date(startD.getTime() + i*24*60*60*1000));
-                subtitleStr = `(Thay đổi từ ngày ${formatDateVn(datesToPrint[0])} đến ngày ${formatDateVn(datesToPrint[6])})`;
-            } 
-            else if (option === '2weeks') {
-                for(let i=0; i<14; i++) datesToPrint.push(new Date(startD.getTime() + i*24*60*60*1000));
-                subtitleStr = `(Từ ngày ${formatDateVn(datesToPrint[0])} đến ngày ${formatDateVn(datesToPrint[13])})`;
-            } 
-            else if (option === 'month') {
-                const m = parseInt(document.getElementById('print-month').value);
-                const y = parseInt(document.getElementById('print-year').value);
-                const daysInMonth = new Date(y, m, 0).getDate();
-                for(let i=1; i<=daysInMonth; i++) {
-                    const d = new Date(y, m-1, i);
-                    datesToPrint.push(d);
-                }
-                subtitleStr = `(Lịch trực tháng ${m}/${y})`;
-            }
+            const subtitleStr = `(Từ ngày ${formatDateVn(datesToPrint[0])} đến ngày ${formatDateVn(datesToPrint[datesToPrint.length - 1])})`;
 
             renderPrintTable(datesToPrint, dateMap, subtitleStr);
         }
 
         function renderPrintTable(datesToPrint, dateMap, subtitleStr) {
-            // Cập nhật Header
             const today = new Date();
             document.getElementById('print-date').innerText = `Mộ Đức, Ngày ${today.getDate().toString().padStart(2, '0')} tháng ${(today.getMonth() + 1).toString().padStart(2, '0')} năm ${today.getFullYear()}`;
             document.getElementById('print-subtitle').innerText = subtitleStr;
@@ -1084,47 +865,38 @@ function doPost(e) {
             tbody.innerHTML = '';
 
             const inDays = ['CN', 'Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy']; 
+            const count = datesToPrint.length;
+            
+            const cellPadding = count > 21 ? '3px' : (count > 10 ? '4px' : '10px');
+            const fontSize = count > 21 ? '11pt' : (count > 10 ? '12pt' : '14pt');
+            const thPadding = count > 21 ? '4px' : (count > 10 ? '6px 4px' : '10px 4px');
 
-            // --- ĐIỀU CHỈNH CO GIÃN ĐỂ IN VỪA TRANG A4 ---
-            const isTwoWeeks = datesToPrint.length === 14;
-            const isMonth = datesToPrint.length >= 28;
-
-            // Thu nhỏ padding và font size nếu in nhiều ngày
-            const cellPadding = isMonth ? '3px' : (isTwoWeeks ? '4px' : '10px');
-            const fontSize = isMonth ? '11pt' : (isTwoWeeks ? '12pt' : '14pt');
-            const thPadding = isMonth ? '4px' : (isTwoWeeks ? '6px 4px' : '10px 4px');
-
-            // Áp dụng cỡ chữ cho bảng
             const table = document.getElementById('print-table');
             table.style.fontSize = fontSize;
             
-            // Áp dụng padding cho tiêu đề cột (th)
             const ths = table.querySelectorAll('th');
             ths.forEach(th => th.style.padding = thPadding);
 
-            // Ép các khoảng cách margin (khoảng trắng) để tiết kiệm không gian giấy A4
-            document.getElementById('print-header').style.marginBottom = isTwoWeeks || isMonth ? '10px' : '20px';
-            document.getElementById('print-title').style.marginBottom = isTwoWeeks || isMonth ? '10px' : '20px';
-            document.getElementById('print-note').style.marginBottom = isTwoWeeks || isMonth ? '15px' : '30px';
-            document.getElementById('print-footer-space').style.marginBottom = isTwoWeeks || isMonth ? '60px' : '100px';
+            const isCompact = count > 10;
+            document.getElementById('print-header').style.marginBottom = isCompact ? '10px' : '20px';
+            document.getElementById('print-title').style.marginBottom = isCompact ? '10px' : '20px';
+            document.getElementById('print-note').style.marginBottom = isCompact ? '15px' : '30px';
+            document.getElementById('print-footer-space').style.marginBottom = isCompact ? '60px' : '100px';
 
             datesToPrint.forEach(d => {
                 const tr = document.createElement('tr');
                 const dateStr = getLocalISODate(d);
                 
-                // Cột Thứ
                 const tdThu = document.createElement('td');
                 tdThu.style.padding = cellPadding;
                 tdThu.innerText = inDays[d.getDay()];
                 tr.appendChild(tdThu);
 
-                // Cột Ngày
                 const tdNgay = document.createElement('td');
                 tdNgay.style.padding = cellPadding;
                 tdNgay.innerText = d.getDate().toString().padStart(2, '0');
                 tr.appendChild(tdNgay);
 
-                // 4 Cột Điểm Y Tế
                 const rowData = dateMap[dateStr] || ['', '', '', ''];
                 for (let r = 0; r < 4; r++) {
                     const tdName = document.createElement('td');
@@ -1135,15 +907,12 @@ function doPost(e) {
                 tbody.appendChild(tr);
             });
 
-            // Chờ cập nhật DOM và gọi hộp thoại in
             setTimeout(() => {
                 window.print();
             }, 300);
         }
 
-        // Khởi động app
         window.onload = initApp;
-
     </script>
 </body>
 </html>
