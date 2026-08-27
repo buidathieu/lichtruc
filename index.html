@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lịch Trực Google Sheets - Trạm Y TẾ Xã Mộ Đức</title>
+    <title>Lịch Trực Google Sheets - TYT Xã Mộ Đức</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .draggable { cursor: grab; }
@@ -18,19 +19,17 @@
             50% { background-color: #dbeafe; }
             100% { background-color: #eff6ff; }
         }
-        /* Loading Overlay */
         #loading-overlay { display: none; }
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #3b82f6;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 40px; height: 40px;
             animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Khung in PDF - Tích hợp cấu trúc hành chính */
+        /* Cấu hình bản in PDF chuẩn văn bản hành chính */
         @media print {
             body { background-color: white; margin: 0; padding: 0; }
             #app-container, #setup-modal, #export-modal, #print-modal, #loading-overlay { display: none !important; }
@@ -38,8 +37,6 @@
             @page { size: A4 portrait; margin: 15mm; }
         }
         #print-container { display: none; font-family: 'Times New Roman', Times, serif; color: black; }
-        
-        /* CSS viền nét cho bảng in */
         #print-container table, #print-container th, #print-container td {
             border: 1px solid black !important;
             border-collapse: collapse !important;
@@ -56,21 +53,22 @@
     <!-- OVERLAY LOADING -->
     <div id="loading-overlay" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
         <div class="loader mb-4"></div>
-        <p class="text-blue-600 font-semibold text-lg" id="loading-text">Đang đồng bộ dữ liệu...</p>
+        <p class="text-blue-600 font-semibold text-lg" id="loading-text">Đang tải dữ liệu...</p>
     </div>
 
-    <!-- MAIN APP CONTAINER -->
     <div id="app-container" class="max-w-7xl mx-auto p-4 md:p-8">
         
-        <!-- Header -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        <!-- Header chính -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6 flex flex-col md:flex-row justify-between items-center gap-4 border-l-4 border-l-blue-600">
             <div>
-                <h1 class="text-2xl font-bold text-blue-700"><i class="fa-solid fa-calendar-days mr-2"></i>Lịch Trực Trạm Y Tế Xã Mộ Đức</h1>
-                <p class="text-sm text-gray-500 mt-1">Liên thông dữ liệu trực tiếp với Google Sheets</p>
+                <h1 class="text-2xl font-bold text-blue-700 flex items-center">
+                    <i class="fa-solid fa-hospital mr-3 text-blue-600"></i>Lịch Trực Trạm Y Tế Xã Mộ Đức
+                </h1>
+                <p class="text-sm text-gray-500 mt-1">Hệ thống xoay tua ca trực tự động & liên thông Google Sheets</p>
             </div>
             <div class="flex flex-wrap gap-2 justify-end">
-                <button onclick="toggleSetupModal()" class="px-3 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition text-sm" title="Cấu hình Google Sheets API">
-                    <i class="fa-solid fa-gear mr-1"></i> Thiết lập API
+                <button onclick="toggleSetupModal()" class="px-3 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition text-sm">
+                    <i class="fa-solid fa-gear mr-1"></i> API
                 </button>
                 <button onclick="toggleExportModal()" class="px-3 py-2 bg-purple-50 text-purple-700 border border-purple-200 font-medium rounded-lg hover:bg-purple-100 transition shadow-sm text-sm">
                     <i class="fa-solid fa-file-excel mr-1"></i> Xuất Lịch Tháng
@@ -82,33 +80,35 @@
                     <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Tải dữ liệu
                 </button>
                 <button onclick="saveToGoogleSheets()" class="px-3 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition shadow-sm text-sm">
-                    <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu lên Sheets
+                    <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu lên Cloud
                 </button>
             </div>
         </div>
 
-        <!-- Main Content -->
         <div class="flex flex-col lg:flex-row gap-6">
             
             <!-- Sidebar: Danh sách nhân sự -->
             <div class="w-full lg:w-1/4 bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col">
                 <div>
-                    <h2 class="font-bold text-gray-700 mb-3 border-b pb-2"><i class="fa-solid fa-user-doctor mr-2"></i>Nhân sự</h2>
-                    <p class="text-xs text-gray-500 mb-4">Kéo thả tên nhân sự vào bảng lịch trực bên phải.</p>
+                    <h2 class="font-bold text-gray-700 mb-3 border-b pb-2 flex items-center justify-between">
+                        <span><i class="fa-solid fa-user-doctor mr-2 text-blue-600"></i>Danh mục cán bộ</span>
+                        <span class="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">23</span>
+                    </h2>
+                    <p class="text-xs text-gray-500 mb-3">Kéo thả tên cán bộ vào ô trực để đổi người thủ công.</p>
                     
-                    <div class="space-y-2 max-h-[400px] overflow-y-auto pr-1" id="staff-list">
-                        <!-- Sẽ được render bằng JS -->
+                    <div class="space-y-1.5 max-h-[320px] overflow-y-auto pr-1" id="staff-list">
+                        <!-- Sẽ được sinh bằng JS -->
                     </div>
                 </div>
 
-                <!-- Lịch sử thay đổi -->
-                <div class="mt-6 border-t pt-4 flex-1 flex flex-col min-h-[200px]">
-                    <h2 class="font-bold text-gray-700 mb-3 flex items-center justify-between">
-                        <span><i class="fa-solid fa-clock-rotate-left mr-2"></i>Lịch sử đổi ca</span>
-                        <button onclick="clearHistory()" class="text-xs text-red-500 hover:underline font-normal">Xóa</button>
+                <!-- Lịch sử đổi ca -->
+                <div class="mt-4 border-t pt-3 flex-1 flex flex-col min-h-[160px]">
+                    <h2 class="font-bold text-gray-700 mb-2 flex items-center justify-between text-xs uppercase tracking-wide">
+                        <span><i class="fa-solid fa-clock-rotate-left mr-1.5 text-blue-500"></i>Lịch sử điều chỉnh</span>
+                        <button onclick="clearHistory()" class="text-red-500 hover:underline font-normal">Xóa</button>
                     </h2>
-                    <div id="history-list" class="space-y-2 overflow-y-auto flex-1 text-xs text-gray-600 pr-2">
-                        <p class="text-gray-400 italic">Chưa có thay đổi nào.</p>
+                    <div id="history-list" class="space-y-1.5 overflow-y-auto flex-1 text-xs text-gray-600 pr-1">
+                        <p class="text-gray-400 italic">Chưa có điều chỉnh nào trong tuần này.</p>
                     </div>
                 </div>
             </div>
@@ -116,25 +116,29 @@
             <!-- Bảng Lịch Trực -->
             <div class="w-full lg:w-3/4 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
                 
-                <!-- Thanh công cụ Chọn Tuần -->
+                <!-- Thanh chọn Tuần -->
                 <div class="p-4 border-b border-gray-200 bg-blue-50/50 flex flex-wrap items-center justify-between gap-4">
                     <div class="flex items-center gap-3">
-                        <button onclick="changeWeek(-1)" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-blue-50 hover:text-blue-600 text-gray-700 font-medium transition text-sm flex items-center">
-                            <i class="fa-solid fa-chevron-left mr-1.5"></i> Tuần trước
+                        <button onclick="changeWeek(-1)" class="px-3.5 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-blue-50 hover:text-blue-600 text-gray-700 font-semibold transition text-sm flex items-center">
+                            <i class="fa-solid fa-chevron-left mr-2"></i> Tuần trước
                         </button>
                         
-                        <div class="flex items-center gap-2 bg-white px-3 py-1.5 border border-gray-300 rounded-lg shadow-sm">
-                            <label class="text-sm font-semibold text-gray-700">Từ:</label>
-                            <input type="date" id="week-start" onchange="updateWeekDates()" class="border-none p-0 text-sm outline-none bg-transparent">
+                        <div class="flex items-center gap-2 bg-white px-3.5 py-1.5 border border-gray-300 rounded-lg shadow-sm">
+                            <label class="text-xs font-bold text-gray-500 uppercase">Từ:</label>
+                            <input type="date" id="week-start" onchange="updateWeekDates(this.value)" class="border-none p-0 text-sm font-semibold outline-none bg-transparent">
                             <span class="text-gray-300">|</span>
-                            <label class="text-sm font-semibold text-gray-700">Đến:</label>
-                            <input type="date" id="week-end" readonly class="border-none p-0 text-sm text-gray-500 bg-transparent cursor-not-allowed outline-none pointer-events-none w-[110px]">
+                            <label class="text-xs font-bold text-gray-500 uppercase">Đến:</label>
+                            <input type="date" id="week-end" readonly class="border-none p-0 text-sm text-gray-500 font-semibold bg-transparent outline-none pointer-events-none w-[105px]">
                         </div>
 
-                        <button onclick="changeWeek(1)" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-blue-50 hover:text-blue-600 text-gray-700 font-medium transition text-sm flex items-center">
-                            Tuần sau <i class="fa-solid fa-chevron-right ml-1.5"></i>
+                        <button onclick="changeWeek(1)" class="px-3.5 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-blue-50 hover:text-blue-600 text-gray-700 font-semibold transition text-sm flex items-center">
+                            Tuần sau <i class="fa-solid fa-chevron-right ml-2"></i>
                         </button>
                     </div>
+
+                    <button onclick="resetToAutoRotation()" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition text-xs font-semibold" title="Khôi phục lại lịch tự động xoay tua chuẩn">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> Tải lại xoay tua chuẩn
+                    </button>
                 </div>
 
                 <div class="overflow-x-auto p-4">
@@ -149,40 +153,30 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="bg-gray-50 p-3 text-xs text-gray-500 border-t flex justify-between">
-                    <span>* Dữ liệu tự động xoay tua hoặc đồng bộ từ Google Sheets khi đã kết nối.</span>
-                    <span id="last-sync-time">Chế độ tự động</span>
+                
+                <div class="bg-gray-50 p-3 text-xs text-gray-500 border-t flex justify-between items-center">
+                    <span><i class="fa-solid fa-circle-info text-blue-500 mr-1"></i> Bấm nút "Tuần sau/Tuần trước" để tự động xoay tua ca trực công bằng.</span>
+                    <span id="last-sync-time" class="font-medium text-gray-600">Chưa đồng bộ Cloud</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL THIẾT LẬP -->
-    <div id="setup-modal" class="fixed inset-0 bg-black/50 z-40 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-            <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
-                <h3 class="font-bold text-lg"><i class="fa-solid fa-link text-blue-600 mr-2"></i>Thiết lập Google Sheets API</h3>
-                <button onclick="toggleSetupModal()" class="text-gray-400 hover:text-red-500"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            
-            <div class="p-5 overflow-y-auto">
-                <div class="mb-4">
-                    <label class="block font-medium text-gray-700 mb-2">Đường link API (Web App URL):</label>
-                    <input type="text" id="api-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <p class="text-xs text-gray-500 mt-1">Dán đường link Apps Script thực tế của bạn vào đây (hoặc dán cứng vào hằng số `GOOGLE_SHEETS_API_URL` trong mã nguồn).</p>
-                </div>
-            </div>
-            
-            <div class="p-4 border-t bg-gray-50 rounded-b-xl flex justify-end">
-                <button onclick="saveApiUrl()" class="px-5 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
-                    Lưu cấu hình
-                </button>
+    <!-- MODAL THIẾT LẬP API -->
+    <div id="setup-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-5">
+            <h3 class="font-bold text-lg mb-4 text-blue-800"><i class="fa-solid fa-link mr-2"></i>Cấu hình API Google Sheets</h3>
+            <p class="text-sm text-gray-600 mb-3">Dán đường link Google Apps Script để lưu trữ lịch trực lên Cloud.</p>
+            <input type="text" id="api-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500 mb-4 text-sm">
+            <div class="flex justify-end gap-2">
+                <button onclick="toggleSetupModal()" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium">Hủy</button>
+                <button onclick="saveApiUrl()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Lưu kết nối</button>
             </div>
         </div>
     </div>
 
     <!-- MODAL XUẤT LỊCH THÁNG -->
-    <div id="export-modal" class="fixed inset-0 bg-black/50 z-40 hidden flex items-center justify-center p-4">
+    <div id="export-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm flex flex-col">
             <div class="p-4 border-b flex justify-between items-center bg-purple-50 rounded-t-xl">
                 <h3 class="font-bold text-lg text-purple-800"><i class="fa-solid fa-calendar-alt mr-2"></i>Xuất lịch theo tháng</h3>
@@ -190,7 +184,7 @@
             </div>
             
             <div class="p-5">
-                <p class="text-sm text-gray-600 mb-4">Hệ thống sẽ tổng hợp dữ liệu các tuần từ Google Sheets và xuất ra file Excel theo mẫu báo cáo tháng.</p>
+                <p class="text-sm text-gray-600 mb-4">Hệ thống sẽ tổng hợp dữ liệu từ Cloud và xuất ra file Excel báo cáo tháng.</p>
                 <div class="flex gap-4">
                     <div class="w-1/2">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Tháng</label>
@@ -212,119 +206,105 @@
         </div>
     </div>
 
-    <!-- MODAL IN LỊCH TRỰC (TỪ NGÀY -> ĐẾN NGÀY) -->
-    <div id="print-modal" class="fixed inset-0 bg-black/50 z-40 hidden flex items-center justify-center p-4">
+    <!-- MODAL IN LỊCH TRỰC (TÙY CHỌN TỪ NGÀY - ĐẾN NGÀY) -->
+    <div id="print-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col">
             <div class="p-4 border-b flex justify-between items-center bg-red-50 rounded-t-xl">
-                <h3 class="font-bold text-lg text-red-800"><i class="fa-solid fa-file-pdf mr-2"></i>Tùy chọn In Lịch Trực</h3>
+                <h3 class="font-bold text-lg text-red-800"><i class="fa-solid fa-file-pdf mr-2"></i>Tùy chọn In Lịch Trực (Trình ký)</h3>
                 <button onclick="togglePrintModal()" class="text-gray-400 hover:text-red-500"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             
             <div class="p-5">
-                <p class="text-sm text-gray-600 mb-4">Vui lòng chọn khoảng thời gian cần in lịch trực:</p>
+                <p class="text-sm text-gray-600 mb-4">Vui lòng chọn khoảng thời gian cần tạo bản in:</p>
                 <div class="flex gap-4 p-4 bg-red-50/50 rounded-lg border border-red-100">
                     <div class="w-1/2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Từ ngày</label>
-                        <input type="date" id="print-start-date" class="w-full border border-gray-300 rounded-md p-2 outline-none focus:border-red-500 bg-white text-sm">
+                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Từ ngày</label>
+                        <input type="date" id="print-start-date" class="w-full border border-gray-300 rounded-md p-2 outline-none focus:border-red-500 bg-white text-sm font-semibold">
                     </div>
                     <div class="w-1/2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Đến ngày</label>
-                        <input type="date" id="print-end-date" class="w-full border border-gray-300 rounded-md p-2 outline-none focus:border-red-500 bg-white text-sm">
+                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Đến ngày</label>
+                        <input type="date" id="print-end-date" class="w-full border border-gray-300 rounded-md p-2 outline-none focus:border-red-500 bg-white text-sm font-semibold">
                     </div>
                 </div>
-                <p class="text-xs text-gray-500 mt-3 italic">* Cỡ chữ sẽ được tự động co giãn để vừa vặn trên trang A4.</p>
+                <p class="text-xs text-gray-500 mt-3 italic">* Cỡ chữ sẽ được tự động căn chỉnh vừa vặn trang giấy A4.</p>
             </div>
             
             <div class="p-4 border-t bg-gray-50 rounded-b-xl flex justify-end gap-2">
                 <button onclick="togglePrintModal()" class="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition">Hủy</button>
-                <button onclick="executePrint()" class="px-5 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition flex items-center">
-                    <i class="fa-solid fa-print mr-2"></i> Tạo bản in
+                <button onclick="executePrint()" class="px-5 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition flex items-center font-bold">
+                    <i class="fa-solid fa-print mr-2"></i> Tạo bản in PDF
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- BẢN IN PDF (TRÌNH KÝ) - BỊ ẨN TRÊN WEB, CHỈ HIỆN KHI XUẤT FILE -->
-    <div id="print-container" class="text-[14pt] leading-tight">
-        
-        <!-- Header Hành Chính -->
-        <div id="print-header" style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+    <!-- KHUNG BẢN IN PDF (HÀNH CHÍNH QUY ĐỊNH) -->
+    <div id="print-container" class="text-[12pt] leading-tight">
+        <div id="print-header" style="display: flex; justify-content: space-between; margin-bottom: 15px;">
             <div style="text-align: center; line-height: 1.2;">
-                <div style="font-size: 13pt;">UBND XÃ MỘ ĐỨC</div>
-                <div style="font-weight: bold; font-size: 13pt;">TRẠM Y TẾ XÃ</div>
-                <div style="border-top: 1px solid black; width: 40%; margin: 4px auto;"></div>
-                <div style="font-size: 13pt; margin-top: 5px;">Số: ....../LT-TYT</div>
+                <div style="font-size: 11pt;">UBND XÃ MỘ ĐỨC</div>
+                <div style="font-weight: bold; font-size: 11pt;">TRẠM Y TẾ</div>
+                <div style="border-top: 1px solid black; width: 40%; margin: 3px auto;"></div>
+                <div style="font-size: 10pt; margin-top: 4px;">Số: ....../LT-TYT</div>
             </div>
             <div style="text-align: center; line-height: 1.2;">
-                <div style="font-weight: bold; font-size: 13pt;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                <div style="font-weight: bold; font-size: 13pt;">Độc lập - Tự do - Hạnh phúc</div>
-                <div style="border-top: 1px solid black; width: 50%; margin: 4px auto;"></div>
-                <div style="font-style: italic; font-size: 13pt; margin-top: 6px;" id="print-date">Mộ Đức, Ngày ... tháng ... năm ...</div>
+                <div style="font-weight: bold; font-size: 11pt;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                <div style="font-weight: bold; font-size: 11pt;">Độc lập - Tự do - Hạnh phúc</div>
+                <div style="border-top: 1px solid black; width: 50%; margin: 3px auto;"></div>
+                <div style="font-style: italic; font-size: 11pt; margin-top: 4px;" id="print-date">Mộ Đức, Ngày ... tháng ... năm 2026</div>
             </div>
         </div>
 
-        <!-- Tiêu đề Văn Bản -->
-        <div id="print-title" style="text-align: center; margin-bottom: 20px; line-height: 1.4;">
-            <div style="font-weight: bold; font-size: 16pt;">LỊCH TRỰC TRẠM Y TẾ XÃ MỘ ĐỨC</div>
-            <div style="font-style: italic;" id="print-subtitle">(Thay đổi từ ngày ... đến ngày ...)</div>
+        <div id="print-title" style="text-align: center; margin-bottom: 15px; line-height: 1.3;">
+            <div style="font-weight: bold; font-size: 15pt;">LỊCH TRỰC TRẠM Y TẾ XÃ MỘ ĐỨC</div>
+            <div style="font-style: italic; font-size: 11pt;" id="print-subtitle">(Từ ngày ... đến ngày ...)</div>
         </div>
 
-        <!-- Bảng Dữ Liệu -->
         <table id="print-table" style="width: 100%; border-collapse: collapse; margin-bottom: 15px; text-align: center;">
             <thead>
                 <tr>
-                    <th style="padding: 10px 4px; font-weight: bold; width: 8%;">Thứ</th>
-                    <th style="padding: 10px 4px; font-weight: bold; width: 8%;">Ngày</th>
-                    <th style="padding: 10px 4px; font-weight: bold; width: 21%;">Điểm trạm chính<br>(Đức Tân)</th>
-                    <th style="padding: 10px 4px; font-weight: bold; width: 21%;">Điểm y tế số 1<br>(Mộ Đức)</th>
-                    <th style="padding: 10px 4px; font-weight: bold; width: 21%;">Điểm y tế số 2<br>(Đức Hòa)</th>
-                    <th style="padding: 10px 4px; font-weight: bold; width: 21%;">Điểm y tế số 3<br>(Đức Phú)</th>
+                    <th style="padding: 6px 4px; font-weight: bold; width: 8%;">Thứ</th>
+                    <th style="padding: 6px 4px; font-weight: bold; width: 8%;">Ngày</th>
+                    <th style="padding: 6px 4px; font-weight: bold; width: 21%;">Điểm trạm chính<br>(Đức Tân)</th>
+                    <th style="padding: 6px 4px; font-weight: bold; width: 21%;">Điểm y tế số 1<br>(Mộ Đức)</th>
+                    <th style="padding: 6px 4px; font-weight: bold; width: 21%;">Điểm y tế số 2<br>(Đức Hòa)</th>
+                    <th style="padding: 6px 4px; font-weight: bold; width: 21%;">Điểm y tế số 3<br>(Đức Phú)</th>
                 </tr>
             </thead>
             <tbody id="print-tbody">
-                <!-- Nội dung được tự động nạp bằng JavaScript -->
+                <!-- Được nạp bằng JS -->
             </tbody>
         </table>
 
-        <!-- Ghi chú -->
-        <div id="print-note" style="margin-bottom: 30px; line-height: 1.4; font-size: 13pt;">
-            <span style="font-weight: bold;">Ghi chú:</span><br>
-            - Thời gian trực: Từ 07 giờ ngày hôm nay đến 07 giờ ngày hôm sau.<br>
-            - Lịch trực thay đổi lần ...
+        <div id="print-note" style="margin-bottom: 20px; line-height: 1.3; font-size: 11pt;">
+            <span style="font-weight: bold;">Ghi chú:</span> - Thời gian trực: Từ 07 giờ ngày hôm nay đến 07 giờ ngày hôm sau.<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Lịch trực có thể thay đổi.
         </div>
 
-        <!-- Chữ ký & Nơi nhận -->
-        <div style="display: flex; justify-content: space-between;">
-            <div style="line-height: 1.3;">
-                <div style="font-weight: bold; font-style: italic; margin-bottom: 4px; font-size: 13pt;">Nơi nhận:</div>
-                <div style="font-size: 12pt;">
+        <!-- Chữ ký người lập & Giám đốc -->
+        <div style="display: flex; justify-content: space-between; font-size: 11pt;">
+            <div style="line-height: 1.3; width: 40%;">
+                <div style="font-weight: bold; font-style: italic; margin-bottom: 4px;">Nơi nhận:</div>
+                <div style="font-size: 10pt;">
                     - Bí thư, chi ủy chi bộ (c/đ);<br>
                     - GĐ, PGĐ TYT xã (b/c);<br>
                     - Các tổ, khoa, điểm y tế (t/h);<br>
                     - Lưu: Hc-Ts-Ns.
                 </div>
             </div>
-            <div style="display: flex; gap: 40px; text-align: center;">
-                <div>
-                    <div style="font-weight: bold; margin-bottom: 100px; font-size: 14pt;">NGƯỜI LẬP</div>
-                    <div style="font-weight: bold; font-size: 14pt;">Bùi Đạt Hiếu</div>
-                </div>
-                <div>
-                    <div id="print-footer-space" style="font-weight: bold; margin-bottom: 100px; font-size: 14pt;">GIÁM ĐỐC</div>
-                    <div style="font-weight: bold; font-size: 14pt;">Phạm Minh Đức</div>
-                </div>
+            <div style="text-align: center; width: 30%;">
+                <div style="font-weight: bold; margin-bottom: 60px;">NGƯỜI LẬP</div>
+                <div style="font-weight: bold;">Võ Quang Vinh</div>
+            </div>
+            <div style="text-align: center; width: 30%;">
+                <div id="print-footer-space" style="font-weight: bold; margin-bottom: 60px;">GIÁM ĐỐC</div>
+                <div style="font-weight: bold;">Phạm Minh Đức</div>
             </div>
         </div>
     </div>
 
     <script>
-        // =========================================================================
-        // 🔗 DÁN ĐƯỜNG LINK GOOGLE APPS SCRIPT WEB APP CỦA BẠN VÀO GIỮA DẤU NHÁY DƯỚI ĐÂY
-        // =========================================================================
-        const GOOGLE_SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbyetoo4Ds38b3hvq1QN7cifgkCImvUq_2tQodZW3Vxabay8x3mTUyJln06sPB6mcMcsxw/exec"; 
-        // =========================================================================
-
-        // --- CẤU HÌNH DỮ LIỆU ---
+        // --- DANH SÁCH NHÂN SỰ GỐC & CÁC ĐIỂM TRẠM ---
         const DAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
         const ROLES = [
             'Điểm trạm chính (Đức Tân)', 
@@ -333,90 +313,111 @@
             'Điểm y tế số 3 (Đức Phú)'
         ];
 
-        // Danh sách xoay tua chuẩn theo từng điểm y tế (Dựa theo tài liệu thực tế)
-        const ROSTERS = [
-            ['Bs Thuyên', 'Ys Tuệ', 'NHS Thuỳ', 'Ys Thủy', 'ĐD Vinh', 'BS Nguyện', 'NHS Thy'], // Điểm trạm chính (7 người)
-            ['ĐD Lài', 'ĐD Nguyệt', 'NHS Việt', 'BS Đức', 'NHS Tin'],                            // Điểm y tế số 1 (5 người)
-            ['Ys Phương', 'BS Phu', 'ĐD Thanh', 'NHS Thắm', 'ĐD Trúc'],                          // Điểm y tế số 2 (5 người)
-            ['NHS Lan', 'Ys Vũ', 'CN Thu', 'ĐD Ly Va', 'NHS Bé', 'NHS Trâm']                      // Điểm y tế số 3 (6 người)
+        const STAFF = [
+            'BS Đức', 'BS Nguyện', 'BS Phu', 'Bs Thuyên',
+            'ĐD Vinh', 'ĐD Trúc', 'ĐD Lài', 'ĐD Thanh', 'ĐD Nguyệt', 'ĐD Ly Va',
+            'NHS Trâm', 'NHS Tin', 'NHS Lan', 'NHS Thy', 'NHS Việt', 'NHS Bé', 'NHS Thuỷ', 'NHS Thắm',
+            'Ys Phương', 'Ys Vũ', 'Ys Thủy', 'Ys Tuệ', 'CN Thu'
         ];
-        
-        // Danh sách tổng hợp 23 nhân sự
-        const STAFF = Array.from(new Set(ROSTERS.flat()));
 
-        // Mốc thời gian chuẩn (16/08/2026 - Chủ nhật)
-        const ANCHOR_DATE_STR = '2026-08-16';
+        // --- CẤU HÌNH XOAY TUA CA TRỰC TOÁN HỌC ---
+        // Mốc chuẩn: Thứ 2, ngày 17/08/2026 (Khớp 100% với danh sách thực tế của Trạm)
+        const ANCHOR_MONDAY = new Date(2026, 7, 17); // Month 7 là tháng 8 trong JS
 
-        // Thuật toán tự động sinh bảng xoay tua trực theo ngày
-        function generateRotatedGrid(startOfWeekStr) {
-            const anchorDate = new Date(ANCHOR_DATE_STR);
-            const startOfWeek = new Date(startOfWeekStr);
-            
-            return ROLES.map((role, rIndex) => {
-                const row = [role];
-                const roster = ROSTERS[rIndex];
-                
-                for (let i = 0; i < 7; i++) {
-                    const currentD = new Date(startOfWeek);
-                    currentD.setDate(startOfWeek.getDate() + i);
-                    
-                    // Tính chênh lệch ngày so với ngày mốc
-                    const diffTime = currentD.getTime() - anchorDate.getTime();
-                    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-                    
-                    // Xoay tua tuần hoàn
-                    let rosterIdx = diffDays % roster.length;
-                    if (rosterIdx < 0) rosterIdx += roster.length;
-                    
-                    row.push(roster[rosterIdx]);
+        const STATIONS = [
+            {
+                name: 'Điểm trạm chính (Đức Tân)',
+                staff: ['Bs Thuyên', 'Ys Tuệ', 'NHS Thuỳ', 'Ys Thủy', 'ĐD Vinh', 'BS Nguyện', 'NHS Thy'],
+                // Đức Tân: 7 cán bộ. Để xoay đủ 7 ngày trong tuần, cứ mỗi tuần đảo vị trí đi 1 nấc
+                getStaff: function(dayDiff, weekIndex, dayInWeek) {
+                    const idx = (dayInWeek + weekIndex + 1) % 7;
+                    return this.staff[(idx + 7) % 7];
                 }
-                return row;
-            });
-        }
+            },
+            {
+                name: 'Điểm y tế số 1 (Mộ Đức)',
+                staff: ['ĐD Lài', 'ĐD Nguyệt', 'NHS Việt', 'BS Đức', 'NHS Tin'],
+                // Mộ Đức: 5 cán bộ, xoay tua đều 5 ngày/chu kỳ
+                getStaff: function(dayDiff) {
+                    const idx = ((dayDiff % 5) + 1 + 5000) % 5;
+                    return this.staff[idx];
+                }
+            },
+            {
+                name: 'Điểm y tế số 2 (Đức Hòa)',
+                staff: ['Ys Phương', 'BS Phu', 'ĐD Thanh', 'NHS Thắm', 'ĐD Trúc'],
+                // Đức Hòa: 5 cán bộ, xoay tua đều 5 ngày/chu kỳ
+                getStaff: function(dayDiff) {
+                    const idx = ((dayDiff % 5) + 1 + 5000) % 5;
+                    return this.staff[idx];
+                }
+            },
+            {
+                name: 'Điểm y tế số 3 (Đức Phú)',
+                staff: ['NHS Lan', 'Ys Vũ', 'CN Thu', 'ĐD Ly Va', 'NHS Bé', 'NHS Trâm'],
+                // Đức Phú: 6 cán bộ, xoay tua đều 6 ngày/chu kỳ
+                getStaff: function(dayDiff) {
+                    const idx = ((dayDiff % 6) + 1 + 6000) % 6;
+                    return this.staff[idx];
+                }
+            }
+        ];
 
-        let scheduleGrid = generateRotatedGrid('2026-08-10');
+        let scheduleGrid = [];
         let highlightedCells = {};
         let weekStart = '';
         let weekEnd = '';
         let weekDates = [];
         let historyLogs = [];
 
-        // Kiểm tra URL API an toàn (Tránh lỗi TypeError: Failed to fetch)
-        function getApiUrl(silent = false) {
-            let url = (typeof GOOGLE_SHEETS_API_URL !== 'undefined' && GOOGLE_SHEETS_API_URL) ? GOOGLE_SHEETS_API_URL.trim() : '';
-            
-            // Đọc thêm từ localStorage nếu trong code chưa dán link
-            if (!url || url.includes('AKfycby...')) {
-                const savedUrl = localStorage.getItem('lichTrucApiUrl');
-                if (savedUrl && savedUrl.trim() && !savedUrl.includes('AKfycby...')) {
-                    url = savedUrl.trim();
-                }
-            }
-
-            const isInvalid = !url || url.includes('AKfycby...') || !url.startsWith('https://');
-            
-            if (isInvalid) {
-                if (!silent) {
-                    alert("Vui lòng dán đường link Google Apps Script Web App thực tế của bạn vào mục 'Thiết lập API' hoặc khai báo trong biến GOOGLE_SHEETS_API_URL!");
-                    toggleSetupModal();
-                }
-                return null;
-            }
-            return url;
+        function getLocalISODate(d) {
+            const dateObj = new Date(d);
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         }
 
+        // TỰ ĐỘNG TÍNH TOÁN LỊCH XOAY TUA THEO BẤT KỲ TUẦN NÀO
+        function generateRotatedGrid(startDateStr) {
+            const parts = startDateStr.split('-');
+            const MondayDate = new Date(parts[0], parts[1] - 1, parts[2]);
+
+            // Tính chênh lệch số ngày từ mốc chuẩn (17/08/2026)
+            const diffTime = MondayDate.getTime() - ANCHOR_MONDAY.getTime();
+            const diffDaysMon = Math.round(diffTime / (1000 * 3600 * 24));
+            const weekIndex = Math.floor(diffDaysMon / 7);
+
+            const grid = [];
+
+            STATIONS.forEach((station) => {
+                const row = [station.name];
+                for (let dayInWeek = 0; dayInWeek < 7; dayInWeek++) {
+                    const currentDayDiff = diffDaysMon + dayInWeek;
+                    const staffName = station.getStaff(currentDayDiff, weekIndex, dayInWeek);
+                    row.push(staffName);
+                }
+                grid.push(row);
+            });
+
+            return grid;
+        }
+
+        // --- KHỞI TẠO ỨNG DỤNG ---
         async function initApp() {
             const today = new Date();
-            const first = today.getDate() - today.getDay() + 1;
-            const monday = new Date(today.setDate(first));
+            const dayOfWeek = today.getDay();
+            const diffToMonday = today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
+            const monday = new Date(today.setDate(diffToMonday));
+            
+            const mondayStr = getLocalISODate(monday);
 
             renderStaffList();
             
-            // Cập nhật lại ngày tuần hiện tại
             const savedUrl = localStorage.getItem('lichTrucApiUrl');
             if(savedUrl) document.getElementById('api-url').value = savedUrl;
 
-            await updateWeekDates(monday.toISOString().split('T')[0]);
+            await updateWeekDates(mondayStr);
         }
 
         async function updateWeekDates(dateString = null) {
@@ -426,7 +427,8 @@
             }
             if (!inputStart.value) return;
 
-            const start = new Date(inputStart.value);
+            const parts = inputStart.value.split('-');
+            const start = new Date(parts[0], parts[1] - 1, parts[2]);
             weekStart = inputStart.value;
             weekDates = [];
 
@@ -438,13 +440,17 @@
 
             const end = new Date(start);
             end.setDate(start.getDate() + 6);
-            weekEnd = end.toISOString().split('T')[0];
+            weekEnd = getLocalISODate(end);
             document.getElementById('week-end').value = weekEnd;
 
             highlightedCells = {};
+            
+            // 1. TỰ ĐỘNG XOAY TUA THEO THUẬT TOÁN
+            scheduleGrid = generateRotatedGrid(weekStart);
+            
             renderTable();
             
-            // Tự động tải dữ liệu từ Google Sheets nếu URL đã sẵn sàng và hợp lệ
+            // 2. NẾU ĐÃ LƯU TRÊN CLOUD THÌ TẢI BẢN SỬA ĐỔI TỪ CLOUD VỀ
             if (getApiUrl(true)) {
                 await loadFromGoogleSheets(weekStart);
             }
@@ -454,12 +460,22 @@
             const inputStart = document.getElementById('week-start');
             if (!inputStart.value) return;
 
-            const currentStart = new Date(inputStart.value);
+            const parts = inputStart.value.split('-');
+            const currentStart = new Date(parts[0], parts[1] - 1, parts[2]);
             currentStart.setDate(currentStart.getDate() + (offset * 7));
-            currentStart.setMinutes(currentStart.getMinutes() - currentStart.getTimezoneOffset());
-            const newDateString = currentStart.toISOString().split('T')[0];
             
+            const newDateString = getLocalISODate(currentStart);
             updateWeekDates(newDateString);
+        }
+
+        function resetToAutoRotation() {
+            if(confirm("Bạn có chắc muốn khôi phục lại lịch xoay tua tự động chuẩn cho tuần này?")) {
+                scheduleGrid = generateRotatedGrid(weekStart);
+                highlightedCells = {};
+                historyLogs = [];
+                renderHistory();
+                renderTable();
+            }
         }
 
         function addLog(message) {
@@ -471,30 +487,27 @@
         function renderHistory() {
             const container = document.getElementById('history-list');
             if(historyLogs.length === 0) {
-                container.innerHTML = '<p class="text-gray-400 italic">Chưa có thay đổi nào.</p>';
+                container.innerHTML = '<p class="text-gray-400 italic">Chưa có điều chỉnh nào trong tuần này.</p>';
                 return;
             }
             container.innerHTML = historyLogs.map(log => 
-                `<div class="bg-gray-50 border border-gray-100 p-2 rounded relative pl-3">
+                `<div class="bg-gray-50 border border-gray-100 p-1.5 rounded relative pl-2.5 text-[11px]">
                     <span class="absolute left-0 top-0 bottom-0 w-1 bg-blue-400 rounded-l"></span>
                     ${log}
                 </div>`
             ).join('');
         }
 
-        function clearHistory() {
-            historyLogs = [];
-            renderHistory();
-        }
+        function clearHistory() { historyLogs = []; renderHistory(); }
 
         function renderStaffList() {
             const container = document.getElementById('staff-list');
             container.innerHTML = '';
             STAFF.forEach(name => {
                 const div = document.createElement('div');
-                div.className = 'draggable p-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300 transition flex items-center shadow-sm';
+                div.className = 'draggable p-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300 transition flex items-center shadow-sm';
                 div.draggable = true;
-                div.innerHTML = `<i class="fa-solid fa-grip-vertical text-gray-400 mr-2"></i> ${name}`;
+                div.innerHTML = `<i class="fa-solid fa-grip-vertical text-gray-300 mr-2"></i> ${name}`;
                 
                 div.addEventListener('dragstart', function(e) {
                     e.dataTransfer.setData('text/plain', name);
@@ -510,10 +523,10 @@
 
         function renderTable() {
             const headerRow = document.getElementById('table-header');
-            headerRow.innerHTML = `<th class="border-b-2 border-gray-300 p-3 bg-gray-100 text-gray-700 font-bold w-40">Vị trí</th>`;
+            headerRow.innerHTML = `<th class="border-b-2 border-gray-300 p-3 bg-gray-100 text-gray-700 font-bold w-44">Vị trí trực</th>`;
             DAYS.forEach((day, index) => {
-                const dateHtml = weekDates[index] ? `<div class="text-xs text-gray-500 font-normal mt-0.5">${weekDates[index]}</div>` : '';
-                headerRow.innerHTML += `<th class="border-b-2 border-gray-300 p-3 bg-gray-100 text-center text-gray-700 font-bold min-w-[100px]">${day} ${dateHtml}</th>`;
+                const dateHtml = weekDates[index] ? `<div class="text-[11px] text-blue-600 font-semibold mt-0.5">${weekDates[index]}</div>` : '';
+                headerRow.innerHTML += `<th class="border-b-2 border-gray-300 p-2.5 bg-gray-100 text-center text-gray-700 font-bold min-w-[95px]">${day} ${dateHtml}</th>`;
             });
 
             const tbody = document.getElementById('table-body');
@@ -524,47 +537,42 @@
                 tr.className = "hover:bg-gray-50 border-b border-gray-200 transition-colors";
                 
                 const tdRole = document.createElement('td');
-                tdRole.className = "p-3 font-semibold text-gray-800 bg-white shadow-[1px_0_0_0_#e5e7eb] relative z-10";
+                tdRole.className = "p-3 font-bold text-gray-800 bg-white border-r border-gray-200 text-xs";
                 tdRole.innerText = row[0];
                 tr.appendChild(tdRole);
 
                 for(let colIndex = 1; colIndex <= DAYS.length; colIndex++) {
                     const td = document.createElement('td');
-                    td.className = "p-2 text-center relative";
+                    td.className = "p-1.5 text-center relative border-r border-gray-100";
                     
                     const cellKey = `${rowIndex}-${colIndex}`;
                     const isHighlighted = highlightedCells[cellKey];
 
                     const contentDiv = document.createElement('div');
-                    contentDiv.className = `p-2 rounded border-2 transition-all cursor-grab active:cursor-grabbing
-                        ${isHighlighted ? 'bg-blue-50 border-blue-400 text-blue-700 font-bold' : 'bg-white border-transparent hover:border-gray-300 text-gray-700'}`;
+                    contentDiv.className = `p-2 rounded border transition-all cursor-grab active:cursor-grabbing font-medium text-xs
+                        ${isHighlighted ? 'bg-blue-100 border-blue-500 text-blue-800 font-bold shadow-sm' : 'bg-white border-gray-200 hover:border-blue-300 text-gray-800'}`;
                     contentDiv.draggable = true;
                     contentDiv.innerText = row[colIndex] || '-';
 
                     contentDiv.addEventListener('dragstart', function(e) {
                         e.dataTransfer.setData('text/plain', JSON.stringify({
-                            source: 'table',
-                            name: row[colIndex],
-                            r: rowIndex,
-                            c: colIndex
+                            source: 'table', name: row[colIndex], r: rowIndex, c: colIndex
                         }));
                         setTimeout(() => contentDiv.classList.add('opacity-50'), 0);
                     });
-                    contentDiv.addEventListener('dragend', function(e) {
-                        contentDiv.classList.remove('opacity-50');
-                    });
+                    contentDiv.addEventListener('dragend', function(e) { contentDiv.classList.remove('opacity-50'); });
 
                     td.addEventListener('dragover', function(e) {
                         e.preventDefault();
-                        contentDiv.classList.add('border-green-400', 'bg-green-50');
+                        contentDiv.classList.add('border-green-500', 'bg-green-50');
                     });
                     td.addEventListener('dragleave', function(e) {
-                        contentDiv.classList.remove('border-green-400', 'bg-green-50');
+                        contentDiv.classList.remove('border-green-500', 'bg-green-50');
                     });
                     
                     td.addEventListener('drop', function(e) {
                         e.preventDefault();
-                        contentDiv.classList.remove('border-green-400', 'bg-green-50');
+                        contentDiv.classList.remove('border-green-500', 'bg-green-50');
                         
                         const dragDataRaw = e.dataTransfer.getData('text/plain');
                         const timeStr = new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
@@ -581,9 +589,8 @@
                                 highlightedCells[`${rowIndex}-${colIndex}`] = true;
                                 highlightedCells[`${dragData.r}-${dragData.c}`] = true;
 
-                                const date1 = weekDates[dragData.c-1] ? ` (${weekDates[dragData.c-1]})` : '';
-                                const date2 = weekDates[colIndex-1] ? ` (${weekDates[colIndex-1]})` : '';
-                                addLog(`[${timeStr}] Đổi ca: <b>${dragData.name}</b>${date1} ↔ <b>${targetName}</b>${date2}`);
+                                const date2 = weekDates[colIndex-1] || '';
+                                addLog(`[${timeStr}] Đổi ca (${date2}): <b>${dragData.name}</b> ↔ <b>${targetName}</b>`);
                             }
                         } catch(err) {
                             const newName = dragDataRaw;
@@ -591,12 +598,10 @@
                             if(newName && STAFF.includes(newName)) {
                                 scheduleGrid[rowIndex][colIndex] = newName;
                                 highlightedCells[`${rowIndex}-${colIndex}`] = true;
-                                
-                                const date = weekDates[colIndex-1] ? ` (${weekDates[colIndex-1]})` : '';
-                                addLog(`[${timeStr}] <b>${newName}</b> thay <b>${oldName !== '-' ? oldName : 'Trống'}</b>${date}`);
+                                const date = weekDates[colIndex-1] || '';
+                                addLog(`[${timeStr}] <b>${newName}</b> thay <b>${oldName !== '-' ? oldName : 'Trống'}</b> (${date})`);
                             }
                         }
-                        
                         renderTable();
                     });
 
@@ -607,19 +612,22 @@
             });
         }
 
-        async function saveToGoogleSheets() {
-            const url = getApiUrl(false);
-            if(!url) return;
+        function getApiUrl(silent = false) {
+            const url = document.getElementById('api-url').value.trim();
+            if(!url && !silent) { alert("Vui lòng thiết lập API trước!"); toggleSetupModal(); }
+            return url || null;
+        }
 
-            showLoading("Đang đẩy dữ liệu lên Google Sheets...");
-            
-            const payload = {
-                weekStart: weekStart,
-                weekEnd: weekEnd,
-                days: DAYS,
-                grid: scheduleGrid,
-                logs: historyLogs
-            };
+        function showLoading(text) {
+            document.getElementById('loading-text').innerText = text;
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+        async function saveToGoogleSheets() {
+            const url = getApiUrl(); if(!url) return;
+            showLoading("Đang lưu lịch trực lên Cloud...");
+            const payload = { weekStart: weekStart, weekEnd: weekEnd, days: DAYS, grid: scheduleGrid, logs: historyLogs };
 
             try {
                 const response = await fetch(url, {
@@ -627,30 +635,19 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ action: 'save', data: payload })
                 });
-                
                 const result = await response.json();
                 if(result.status === 'success') {
-                    alert(`Đã lưu thành công!\nDữ liệu được đẩy vào Tab: "${result.sheet}" trên Google Sheets.`);
-                    document.getElementById('last-sync-time').innerText = "Cập nhật cuối: " + new Date().toLocaleTimeString('vi-VN');
+                    alert(`Đã lưu thành công vào Tab "${result.sheet}" trên Google Sheets!`);
+                    document.getElementById('last-sync-time').innerText = "Đã đồng bộ: " + new Date().toLocaleTimeString('vi-VN');
                     highlightedCells = {};
                     renderTable();
-                } else {
-                    alert("Có lỗi xảy ra từ phía Server: " + result.message);
-                }
-            } catch(error) {
-                console.warn("Lỗi POST Google Sheets:", error);
-                alert("Đã gửi lệnh lưu. Hãy kiểm tra lại kết nối mạng hoặc file Google Sheets của bạn.");
-            } finally {
-                hideLoading();
-            }
+                } else alert("Lỗi: " + result.message);
+            } catch(e) { alert("Đã gửi lệnh lưu."); } finally { hideLoading(); }
         }
 
         async function loadFromGoogleSheets(targetWeek = weekStart) {
-            const url = getApiUrl(true);
-            if(!url) return;
-
-            showLoading("Đang tải dữ liệu tuần này từ Google Sheets...");
-
+            const url = getApiUrl(true); if(!url) return;
+            showLoading("Đang tải dữ liệu Cloud...");
             try {
                 const response = await fetch(url, { 
                     method: 'POST',
@@ -658,73 +655,30 @@
                     body: JSON.stringify({ action: 'load', weekStart: targetWeek })
                 });
                 const result = await response.json();
-                
                 if(result.status === 'success' && result.grid && result.grid.length > 0) {
                     scheduleGrid = result.grid;
-                    highlightedCells = {};
                     historyLogs = result.logs || [];
-                    document.getElementById('last-sync-time').innerText = "Tải xuống lúc: " + new Date().toLocaleTimeString('vi-VN');
-                } else if (result.status === 'empty') {
-                    // Tự động xoay tua lịch trực cho tuần mới dựa trên thuật toán xoay vòng
-                    scheduleGrid = generateRotatedGrid(targetWeek);
-                    historyLogs = [];
-                    highlightedCells = {};
-                    document.getElementById('last-sync-time').innerText = "Tuần mới (Tự động xoay tua)";
-                } else {
-                    console.warn("Có lỗi khi đọc dữ liệu:", result.message);
+                    document.getElementById('last-sync-time').innerText = "Đã tải: " + new Date().toLocaleTimeString('vi-VN');
+                    renderHistory();
+                    renderTable();
                 }
-                
-                renderHistory();
-                renderTable();
-            } catch (error) {
-                console.warn("Không thể kết nối Google Sheets (Failed to fetch):", error);
-                scheduleGrid = generateRotatedGrid(targetWeek);
-                document.getElementById('last-sync-time').innerText = "Chế độ ngoại tuyến (Tự động xoay tua)";
-                renderHistory();
-                renderTable();
-            } finally {
-                hideLoading();
-            }
+            } catch (e) { console.log("Chưa có bản lưu riêng trên Cloud."); } finally { hideLoading(); }
         }
 
-        function toggleSetupModal() {
-            document.getElementById('setup-modal').classList.toggle('hidden');
+        function toggleSetupModal() { document.getElementById('setup-modal').classList.toggle('hidden'); }
+        function saveApiUrl() { 
+            localStorage.setItem('lichTrucApiUrl', document.getElementById('api-url').value.trim()); 
+            toggleSetupModal(); 
+            loadFromGoogleSheets();
         }
 
-        function saveApiUrl() {
-            const url = document.getElementById('api-url').value.trim();
-            localStorage.setItem('lichTrucApiUrl', url);
-            toggleSetupModal();
-            if(url) loadFromGoogleSheets();
-        }
-
-        function showLoading(text) {
-            document.getElementById('loading-text').innerText = text;
-            document.getElementById('loading-overlay').style.display = 'flex';
-        }
-
-        function hideLoading() {
-            document.getElementById('loading-overlay').style.display = 'none';
-        }
-
-        function toggleExportModal() {
-            const modal = document.getElementById('export-modal');
-            modal.classList.toggle('hidden');
-            if (!modal.classList.contains('hidden')) {
-                const today = new Date();
-                document.getElementById('export-month').value = today.getMonth() + 1;
-                document.getElementById('export-year').value = today.getFullYear();
-            }
-        }
-
+        function toggleExportModal() { document.getElementById('export-modal').classList.toggle('hidden'); }
+        
         async function executeExportMonthly() {
-            const url = getApiUrl(false);
-            if(!url) return;
-
+            const url = getApiUrl(); if(!url) return;
             const month = parseInt(document.getElementById('export-month').value);
             const year = parseInt(document.getElementById('export-year').value);
-
-            showLoading(`Đang tổng hợp dữ liệu tháng ${month}/${year}...`);
+            showLoading(`Đang tổng hợp lịch Tháng ${month}/${year}...`);
             
             try {
                 const response = await fetch(url, { 
@@ -733,129 +687,70 @@
                     body: JSON.stringify({ action: 'exportMonth' })
                 });
                 const result = await response.json();
-                
                 if(result.status === 'success') {
                     processAndDownloadExcel(result.data, month, year);
                     toggleExportModal();
-                } else {
-                    alert("Có lỗi khi lấy dữ liệu: " + (result.message || "Không xác định"));
                 }
-            } catch (error) {
-                console.error("Lỗi Export:", error);
-                alert("Lỗi kết nối khi tải dữ liệu tháng. Vui lòng kiểm tra lại URL Apps Script.");
-            } finally {
-                hideLoading();
-            }
+            } catch(e) { alert("Lỗi xuất file Excel."); } finally { hideLoading(); }
         }
 
         function processAndDownloadExcel(allWeeksData, targetMonth, targetYear) {
             const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
             const headerRow = ['Vị trí / Vai trò'];
-            for(let d = 1; d <= daysInMonth; d++) {
-                headerRow.push(d);
-            }
+            for(let d = 1; d <= daysInMonth; d++) headerRow.push(d);
             
             const dataRows = ROLES.map(role => {
                 const row = new Array(daysInMonth + 1).fill('');
-                row[0] = role;
-                return row;
+                row[0] = role; return row;
             });
 
             allWeeksData.forEach(week => {
-                const wStart = new Date(week.weekStart);
-                if (isNaN(wStart.getTime())) return; 
-
+                const parts = week.weekStart.split('-');
+                const wStart = new Date(parts[0], parts[1] - 1, parts[2]);
                 for (let i = 0; i < 7; i++) {
                     const currentDate = new Date(wStart);
                     currentDate.setDate(wStart.getDate() + i);
-
                     if (currentDate.getMonth() + 1 === targetMonth && currentDate.getFullYear() === targetYear) {
                         const dayOfMonth = currentDate.getDate();
-
                         for (let r = 0; r < ROLES.length; r++) {
-                            if (week.grid[r] && week.grid[r][i + 1]) {
-                                dataRows[r][dayOfMonth] = week.grid[r][i + 1];
-                            }
+                            if (week.grid[r] && week.grid[r][i + 1]) dataRows[r][dayOfMonth] = week.grid[r][i + 1];
                         }
                     }
                 }
             });
 
-            const wsData = [headerRow, ...dataRows];
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
-            
-            const wscols = [{wch: 18}];
-            for(let i = 0; i < daysInMonth; i++) wscols.push({wch: 10});
+            const ws = XLSX.utils.aoa_to_sheet([headerRow, ...dataRows]);
+            const wscols = [{wch: 22}]; for(let i = 0; i < daysInMonth; i++) wscols.push({wch: 10});
             ws['!cols'] = wscols;
 
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, `Tháng ${targetMonth}`);
-            XLSX.writeFile(wb, `TRỰC T${targetMonth}.xls`);
+            XLSX.writeFile(wb, `TRỰC T${targetMonth}_${targetYear}.xls`);
         }
 
         function togglePrintModal() {
             const modal = document.getElementById('print-modal');
             modal.classList.toggle('hidden');
-            
             if (!modal.classList.contains('hidden')) {
-                if(weekStart && weekEnd) {
-                    document.getElementById('print-start-date').value = weekStart;
-                    document.getElementById('print-end-date').value = weekEnd;
-                }
+                document.getElementById('print-start-date').value = weekStart;
+                document.getElementById('print-end-date').value = weekEnd;
             }
-        }
-
-        function getLocalISODate(d) {
-            const localD = new Date(d);
-            localD.setMinutes(localD.getMinutes() - localD.getTimezoneOffset());
-            return localD.toISOString().split('T')[0];
         }
 
         async function executePrint() {
             const printStartVal = document.getElementById('print-start-date').value;
             const printEndVal = document.getElementById('print-end-date').value;
+            if (!printStartVal || !printEndVal) { alert("Vui lòng chọn Từ ngày và Đến ngày."); return; }
 
-            if (!printStartVal || !printEndVal) {
-                alert("Vui lòng chọn đầy đủ Từ ngày và Đến ngày.");
-                return;
-            }
+            const partsS = printStartVal.split('-'); const pStart = new Date(partsS[0], partsS[1] - 1, partsS[2]);
+            const partsE = printEndVal.split('-'); const pEnd = new Date(partsE[0], partsE[1] - 1, partsE[2]);
+            if (pStart > pEnd) { alert("Ngày bắt đầu không được lớn hơn ngày kết thúc."); return; }
 
-            const pStart = new Date(printStartVal);
-            const pEnd = new Date(printEndVal);
-
-            if (pStart > pEnd) {
-                alert("Ngày bắt đầu không được lớn hơn ngày kết thúc.");
-                return;
-            }
-
-            const diffTime = Math.abs(pEnd - pStart);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-            if (diffDays > 31) {
-                if(!confirm("Bạn đang chọn khoảng thời gian lớn hơn 1 tháng. Chữ in ra sẽ rất nhỏ, bạn có chắc chắn muốn tiếp tục?")) return;
-            }
-
+            const diffDays = Math.round((pEnd - pStart) / (1000 * 3600 * 24)) + 1;
             togglePrintModal();
 
-            const dateMap = {}; 
-            
-            if(weekStart) {
-                const startD = new Date(weekStart);
-                for(let i=0; i<7; i++) {
-                    const d = new Date(startD);
-                    d.setDate(startD.getDate() + i);
-                    const dateStr = getLocalISODate(d);
-                    dateMap[dateStr] = [
-                        scheduleGrid[0] ? scheduleGrid[0][i+1] : '',
-                        scheduleGrid[1] ? scheduleGrid[1][i+1] : '',
-                        scheduleGrid[2] ? scheduleGrid[2][i+1] : '',
-                        scheduleGrid[3] ? scheduleGrid[3][i+1] : ''
-                    ];
-                }
-            }
-
+            const dateMap = {};
             const datesToPrint = [];
-            let isMissingData = false;
 
             for(let i = 0; i < diffDays; i++) {
                 const d = new Date(pStart);
@@ -863,47 +758,9 @@
                 datesToPrint.push(d);
                 
                 const dateStr = getLocalISODate(d);
-                if (!dateMap[dateStr]) {
-                    isMissingData = true;
-                }
-            }
-
-            if (isMissingData) {
-                const url = getApiUrl(true);
-                if (url) {
-                    showLoading("Khoảng thời gian chứa dữ liệu ngoài tuần hiện tại. Đang tải thêm từ Google Sheets...");
-                    try {
-                        const response = await fetch(url, { 
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                            body: JSON.stringify({ action: 'exportMonth' })
-                        });
-                        const result = await response.json();
-                        if(result.status === 'success') {
-                            result.data.forEach(week => {
-                                const wS = new Date(week.weekStart);
-                                if (isNaN(wS.getTime())) return;
-                                for(let i=0; i<7; i++) {
-                                    const d = new Date(wS);
-                                    d.setDate(wS.getDate() + i);
-                                    const dateStr = getLocalISODate(d);
-                                    if (!dateMap[dateStr]) {
-                                        dateMap[dateStr] = [
-                                            week.grid[0] ? week.grid[0][i+1] : '',
-                                            week.grid[1] ? week.grid[1][i+1] : '',
-                                            week.grid[2] ? week.grid[2][i+1] : '',
-                                            week.grid[3] ? week.grid[3][i+1] : ''
-                                        ];
-                                    }
-                                }
-                            });
-                        }
-                    } catch (error) {
-                        console.warn("Lỗi lấy dữ liệu in:", error);
-                    } finally {
-                        hideLoading();
-                    }
-                }
+                // Sinh dữ liệu xoay tua toán học chuẩn cho từng ngày trong khoảng in
+                const dayGrid = generateRotatedGrid(dateStr);
+                dateMap[dateStr] = [dayGrid[0][1], dayGrid[1][1], dayGrid[2][1], dayGrid[3][1]];
             }
 
             const formatDateVn = (dObj) => `${dObj.getDate().toString().padStart(2, '0')}/${(dObj.getMonth()+1).toString().padStart(2, '0')}/${dObj.getFullYear()}`;
@@ -919,39 +776,21 @@
 
             const tbody = document.getElementById('print-tbody');
             tbody.innerHTML = '';
-
             const inDays = ['CN', 'Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy']; 
+
             const count = datesToPrint.length;
-            
-            const cellPadding = count > 21 ? '3px' : (count > 10 ? '4px' : '10px');
-            const fontSize = count > 21 ? '11pt' : (count > 10 ? '12pt' : '14pt');
-            const thPadding = count > 21 ? '4px' : (count > 10 ? '6px 4px' : '10px 4px');
+            const cellPadding = count > 20 ? '3px' : (count > 10 ? '4px' : '8px');
+            const fontSize = count > 20 ? '10pt' : (count > 10 ? '11pt' : '12pt');
 
-            const table = document.getElementById('print-table');
-            table.style.fontSize = fontSize;
-            
-            const ths = table.querySelectorAll('th');
-            ths.forEach(th => th.style.padding = thPadding);
-
-            const isCompact = count > 10;
-            document.getElementById('print-header').style.marginBottom = isCompact ? '10px' : '20px';
-            document.getElementById('print-title').style.marginBottom = isCompact ? '10px' : '20px';
-            document.getElementById('print-note').style.marginBottom = isCompact ? '15px' : '30px';
-            document.getElementById('print-footer-space').style.marginBottom = isCompact ? '60px' : '100px';
+            document.getElementById('print-table').style.fontSize = fontSize;
+            document.getElementById('print-footer-space').style.marginBottom = count > 10 ? '45px' : '70px';
 
             datesToPrint.forEach(d => {
                 const tr = document.createElement('tr');
                 const dateStr = getLocalISODate(d);
                 
-                const tdThu = document.createElement('td');
-                tdThu.style.padding = cellPadding;
-                tdThu.innerText = inDays[d.getDay()];
-                tr.appendChild(tdThu);
-
-                const tdNgay = document.createElement('td');
-                tdNgay.style.padding = cellPadding;
-                tdNgay.innerText = d.getDate().toString().padStart(2, '0');
-                tr.appendChild(tdNgay);
+                const tdThu = document.createElement('td'); tdThu.style.padding = cellPadding; tdThu.innerText = inDays[d.getDay()]; tr.appendChild(tdThu);
+                const tdNgay = document.createElement('td'); tdNgay.style.padding = cellPadding; tdNgay.innerText = String(d.getDate()).padStart(2, '0'); tr.appendChild(tdNgay);
 
                 const rowData = dateMap[dateStr] || ['', '', '', ''];
                 for (let r = 0; r < 4; r++) {
@@ -963,9 +802,7 @@
                 tbody.appendChild(tr);
             });
 
-            setTimeout(() => {
-                window.print();
-            }, 300);
+            setTimeout(() => { window.print(); }, 300);
         }
 
         window.onload = initApp;
