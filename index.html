@@ -32,7 +32,7 @@
         /* Cấu hình bản in PDF chuẩn văn bản hành chính */
         @media print {
             body { background-color: white; margin: 0; padding: 0; }
-            #app-container, #setup-modal, #export-modal, #print-modal, #loading-overlay { display: none !important; }
+            #app-container, #setup-modal, #export-modal, #print-modal, #msg-modal, #loading-overlay { display: none !important; }
             #print-container { display: block !important; }
             @page { size: A4 portrait; margin: 15mm; }
         }
@@ -68,7 +68,7 @@
             </div>
             <div class="flex flex-wrap gap-2 justify-end">
                 <button onclick="toggleSetupModal()" class="px-3 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition text-sm">
-                    <i class="fa-solid fa-gear mr-1"></i> API
+                    <i class="fa-solid fa-gear mr-1"></i> Thiết lập API
                 </button>
                 <button onclick="toggleExportModal()" class="px-3 py-2 bg-purple-50 text-purple-700 border border-purple-200 font-medium rounded-lg hover:bg-purple-100 transition shadow-sm text-sm">
                     <i class="fa-solid fa-file-excel mr-1"></i> Xuất Lịch Tháng
@@ -238,6 +238,20 @@
         </div>
     </div>
 
+    <!-- MODAL THÔNG BÁO CUSTOM -->
+    <div id="msg-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-5 text-center flex flex-col items-center">
+            <div id="msg-icon" class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl mb-3">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <h3 id="msg-title" class="font-bold text-base text-gray-800 mb-2">Thông báo</h3>
+            <p id="msg-text" class="text-sm text-gray-600 mb-5 leading-relaxed"></p>
+            <div class="flex justify-center gap-3 w-full" id="msg-buttons">
+                <button onclick="closeMsgModal()" class="px-5 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition text-sm w-full">Đã hiểu</button>
+            </div>
+        </div>
+    </div>
+
     <!-- KHUNG BẢN IN PDF (HÀNH CHÍNH QUY ĐỊNH) -->
     <div id="print-container" class="text-[12pt] leading-tight">
         <div id="print-header" style="display: flex; justify-content: space-between; margin-bottom: 15px;">
@@ -304,7 +318,9 @@
     </div>
 
     <script>
-        // --- DANH SÁCH NHÂN SỰ GỐC & CÁC ĐIỂM TRẠM ---
+        // --- CẤU HÌNH API CỐ ĐỊNH & DỮ LIỆU CÁN BỘ ---
+        const GOOGLE_SHEETS_API_URL = ""; // Bạn có thể dán URL Google Apps Script mặc định vào đây
+
         const DAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
         const ROLES = [
             'Điểm trạm chính (Đức Tân)', 
@@ -328,16 +344,16 @@
             {
                 name: 'Điểm trạm chính (Đức Tân)',
                 staff: ['Bs Thuyên', 'Ys Tuệ', 'NHS Thuỳ', 'Ys Thủy', 'ĐD Vinh', 'BS Nguyện', 'NHS Thy'],
-                // Đức Tân: 7 cán bộ. Để xoay đủ 7 ngày trong tuần, cứ mỗi tuần đảo vị trí đi 1 nấc
+                // Đức Tân: 7 cán bộ. Cứ mỗi tuần dịch chuyển đi 1 vị trí
                 getStaff: function(dayDiff, weekIndex, dayInWeek) {
                     const idx = (dayInWeek + weekIndex + 1) % 7;
-                    return this.staff[(idx + 7) % 7];
+                    return this.staff[((idx % 7) + 7) % 7];
                 }
             },
             {
                 name: 'Điểm y tế số 1 (Mộ Đức)',
                 staff: ['ĐD Lài', 'ĐD Nguyệt', 'NHS Việt', 'BS Đức', 'NHS Tin'],
-                // Mộ Đức: 5 cán bộ, xoay tua đều 5 ngày/chu kỳ
+                // Mộ Đức: 5 cán bộ, xoay tua 5 ngày/chu kỳ
                 getStaff: function(dayDiff) {
                     const idx = ((dayDiff % 5) + 1 + 5000) % 5;
                     return this.staff[idx];
@@ -346,7 +362,7 @@
             {
                 name: 'Điểm y tế số 2 (Đức Hòa)',
                 staff: ['Ys Phương', 'BS Phu', 'ĐD Thanh', 'NHS Thắm', 'ĐD Trúc'],
-                // Đức Hòa: 5 cán bộ, xoay tua đều 5 ngày/chu kỳ
+                // Đức Hòa: 5 cán bộ, xoay tua 5 ngày/chu kỳ
                 getStaff: function(dayDiff) {
                     const idx = ((dayDiff % 5) + 1 + 5000) % 5;
                     return this.staff[idx];
@@ -355,7 +371,7 @@
             {
                 name: 'Điểm y tế số 3 (Đức Phú)',
                 staff: ['NHS Lan', 'Ys Vũ', 'CN Thu', 'ĐD Ly Va', 'NHS Bé', 'NHS Trâm'],
-                // Đức Phú: 6 cán bộ, xoay tua đều 6 ngày/chu kỳ
+                // Đức Phú: 6 cán bộ, xoay tua 6 ngày/chu kỳ
                 getStaff: function(dayDiff) {
                     const idx = ((dayDiff % 6) + 1 + 6000) % 6;
                     return this.staff[idx];
@@ -378,12 +394,12 @@
             return `${year}-${month}-${day}`;
         }
 
-        // TỰ ĐỘNG TÍNH TOÁN LỊCH XOAY TUA THEO BẤT KỲ TUẦN NÀO
+        // TỰ ĐỘNG TÍNH TOÁN LỊCH XOAY TUA THEO TUẦN BẮT ĐẦU TỪ THỨ 2
         function generateRotatedGrid(startDateStr) {
             const parts = startDateStr.split('-');
             const MondayDate = new Date(parts[0], parts[1] - 1, parts[2]);
 
-            // Tính chênh lệch số ngày từ mốc chuẩn (17/08/2026)
+            // Tính chênh lệch số ngày từ mốc chuẩn (Thứ 2, 17/08/2026)
             const diffTime = MondayDate.getTime() - ANCHOR_MONDAY.getTime();
             const diffDaysMon = Math.round(diffTime / (1000 * 3600 * 24));
             const weekIndex = Math.floor(diffDaysMon / 7);
@@ -414,8 +430,8 @@
 
             renderStaffList();
             
-            const savedUrl = localStorage.getItem('lichTrucApiUrl');
-            if(savedUrl) document.getElementById('api-url').value = savedUrl;
+            const savedUrl = localStorage.getItem('lichTrucApiUrl') || GOOGLE_SHEETS_API_URL;
+            if (savedUrl) document.getElementById('api-url').value = savedUrl;
 
             await updateWeekDates(mondayStr);
         }
@@ -445,12 +461,12 @@
 
             highlightedCells = {};
             
-            // 1. TỰ ĐỘNG XOAY TUA THEO THUẬT TOÁN
+            // 1. TỰ ĐỘNG XOAY TUA THEO THUẬT TOÁN TOÁN HỌC
             scheduleGrid = generateRotatedGrid(weekStart);
             
             renderTable();
             
-            // 2. NẾU ĐÃ LƯU TRÊN CLOUD THÌ TẢI BẢN SỬA ĐỔI TỪ CLOUD VỀ
+            // 2. NẾU CÓ DỮ LIỆU SỬA ĐỔI TRÊN CLOUD THÌ TẢI VỀ NẠP ĐÈ
             if (getApiUrl(true)) {
                 await loadFromGoogleSheets(weekStart);
             }
@@ -469,13 +485,13 @@
         }
 
         function resetToAutoRotation() {
-            if(confirm("Bạn có chắc muốn khôi phục lại lịch xoay tua tự động chuẩn cho tuần này?")) {
+            showConfirm("Bạn có chắc muốn khôi phục lại lịch xoay tua tự động chuẩn cho tuần này?", () => {
                 scheduleGrid = generateRotatedGrid(weekStart);
                 highlightedCells = {};
                 historyLogs = [];
                 renderHistory();
                 renderTable();
-            }
+            });
         }
 
         function addLog(message) {
@@ -613,8 +629,11 @@
         }
 
         function getApiUrl(silent = false) {
-            const url = document.getElementById('api-url').value.trim();
-            if(!url && !silent) { alert("Vui lòng thiết lập API trước!"); toggleSetupModal(); }
+            const url = document.getElementById('api-url').value.trim() || GOOGLE_SHEETS_API_URL;
+            if(!url && !silent) { 
+                showAlert("Vui lòng thiết lập API Google Sheets trong mục cài đặt!"); 
+                toggleSetupModal(); 
+            }
             return url || null;
         }
 
@@ -637,12 +656,16 @@
                 });
                 const result = await response.json();
                 if(result.status === 'success') {
-                    alert(`Đã lưu thành công vào Tab "${result.sheet}" trên Google Sheets!`);
+                    showAlert(`Đã lưu thành công vào Tab "${result.sheet}" trên Google Sheets!`);
                     document.getElementById('last-sync-time').innerText = "Đã đồng bộ: " + new Date().toLocaleTimeString('vi-VN');
                     highlightedCells = {};
                     renderTable();
-                } else alert("Lỗi: " + result.message);
-            } catch(e) { alert("Đã gửi lệnh lưu."); } finally { hideLoading(); }
+                } else showAlert("Lỗi: " + result.message);
+            } catch(e) { 
+                showAlert("Đã gửi lệnh lưu tới Google Sheets."); 
+            } finally { 
+                hideLoading(); 
+            }
         }
 
         async function loadFromGoogleSheets(targetWeek = weekStart) {
@@ -662,7 +685,11 @@
                     renderHistory();
                     renderTable();
                 }
-            } catch (e) { console.log("Chưa có bản lưu riêng trên Cloud."); } finally { hideLoading(); }
+            } catch (e) { 
+                console.log("Chưa có bản lưu riêng trên Cloud."); 
+            } finally { 
+                hideLoading(); 
+            }
         }
 
         function toggleSetupModal() { document.getElementById('setup-modal').classList.toggle('hidden'); }
@@ -691,7 +718,11 @@
                     processAndDownloadExcel(result.data, month, year);
                     toggleExportModal();
                 }
-            } catch(e) { alert("Lỗi xuất file Excel."); } finally { hideLoading(); }
+            } catch(e) { 
+                showAlert("Không thể tải file Excel. Vui lòng kiểm tra lại kết nối API."); 
+            } finally { 
+                hideLoading(); 
+            }
         }
 
         function processAndDownloadExcel(allWeeksData, targetMonth, targetYear) {
@@ -740,17 +771,18 @@
         async function executePrint() {
             const printStartVal = document.getElementById('print-start-date').value;
             const printEndVal = document.getElementById('print-end-date').value;
-            if (!printStartVal || !printEndVal) { alert("Vui lòng chọn Từ ngày và Đến ngày."); return; }
+            if (!printStartVal || !printEndVal) { showAlert("Vui lòng chọn Từ ngày và Đến ngày."); return; }
 
             const partsS = printStartVal.split('-'); const pStart = new Date(partsS[0], partsS[1] - 1, partsS[2]);
             const partsE = printEndVal.split('-'); const pEnd = new Date(partsE[0], partsE[1] - 1, partsE[2]);
-            if (pStart > pEnd) { alert("Ngày bắt đầu không được lớn hơn ngày kết thúc."); return; }
+            if (pStart > pEnd) { showAlert("Ngày bắt đầu không được lớn hơn ngày kết thúc."); return; }
 
             const diffDays = Math.round((pEnd - pStart) / (1000 * 3600 * 24)) + 1;
             togglePrintModal();
 
             const dateMap = {};
             const datesToPrint = [];
+            const mondayGridCache = {};
 
             for(let i = 0; i < diffDays; i++) {
                 const d = new Date(pStart);
@@ -758,9 +790,36 @@
                 datesToPrint.push(d);
                 
                 const dateStr = getLocalISODate(d);
-                // Sinh dữ liệu xoay tua toán học chuẩn cho từng ngày trong khoảng in
-                const dayGrid = generateRotatedGrid(dateStr);
-                dateMap[dateStr] = [dayGrid[0][1], dayGrid[1][1], dayGrid[2][1], dayGrid[3][1]];
+                const dayOfWeek = d.getDay();
+                const dayInWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 0: Thứ 2, 6: Chủ nhật
+                const colIndex = dayInWeek + 1;
+
+                // Nếu ngày nằm trong tuần hiện tại đang thao tác trên web
+                if (weekStart && weekEnd && dateStr >= weekStart && dateStr <= weekEnd && scheduleGrid && scheduleGrid.length >= 4) {
+                    dateMap[dateStr] = [
+                        scheduleGrid[0][colIndex] || '',
+                        scheduleGrid[1][colIndex] || '',
+                        scheduleGrid[2][colIndex] || '',
+                        scheduleGrid[3][colIndex] || ''
+                    ];
+                } else {
+                    // Tìm ngày Thứ 2 của tuần chứa ngày d
+                    const mondayDate = new Date(d);
+                    mondayDate.setDate(d.getDate() - dayInWeek);
+                    const mondayStr = getLocalISODate(mondayDate);
+
+                    if (!mondayGridCache[mondayStr]) {
+                        mondayGridCache[mondayStr] = generateRotatedGrid(mondayStr);
+                    }
+                    const weekGrid = mondayGridCache[mondayStr];
+
+                    dateMap[dateStr] = [
+                        weekGrid[0][colIndex] || '',
+                        weekGrid[1][colIndex] || '',
+                        weekGrid[2][colIndex] || '',
+                        weekGrid[3][colIndex] || ''
+                    ];
+                }
             }
 
             const formatDateVn = (dObj) => `${dObj.getDate().toString().padStart(2, '0')}/${(dObj.getMonth()+1).toString().padStart(2, '0')}/${dObj.getFullYear()}`;
@@ -803,6 +862,36 @@
             });
 
             setTimeout(() => { window.print(); }, 300);
+        }
+
+        // --- HÀM THÔNG BÁO THAY THẾ ALERT/CONFIRM ---
+        function showAlert(text, title = "Thông báo") {
+            document.getElementById('msg-title').innerText = title;
+            document.getElementById('msg-text').innerHTML = text;
+            document.getElementById('msg-icon').className = "w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl mb-3";
+            document.getElementById('msg-icon').innerHTML = '<i class="fa-solid fa-circle-info"></i>';
+            document.getElementById('msg-buttons').innerHTML = `<button onclick="closeMsgModal()" class="px-5 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition text-sm w-full">Đã hiểu</button>`;
+            document.getElementById('msg-modal').classList.remove('hidden');
+        }
+
+        function showConfirm(text, callback, title = "Xác nhận") {
+            document.getElementById('msg-title').innerText = title;
+            document.getElementById('msg-text').innerHTML = text;
+            document.getElementById('msg-icon').className = "w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xl mb-3";
+            document.getElementById('msg-icon').innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            document.getElementById('msg-buttons').innerHTML = `
+                <button onclick="closeMsgModal()" class="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition text-sm w-1/2">Hủy</button>
+                <button id="msg-btn-confirm" class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition text-sm w-1/2">Đồng ý</button>
+            `;
+            document.getElementById('msg-btn-confirm').onclick = () => {
+                closeMsgModal();
+                if (callback) callback();
+            };
+            document.getElementById('msg-modal').classList.remove('hidden');
+        }
+
+        function closeMsgModal() {
+            document.getElementById('msg-modal').classList.add('hidden');
         }
 
         window.onload = initApp;
